@@ -171,7 +171,7 @@
           .querySelectorAll("#controls button.active")
           .forEach((button) => button.classList.remove("active"));
         if (current.chord) {
-          current.chord.pause();
+          current.chord.stop();
         }
         const { chord, notes } = lib[type][root];
         if (current.chord === chord) {
@@ -181,11 +181,13 @@
           current.chord = chord;
           current.notes = notes;
           notes.forEach((note) => {
-            if (note.state === "unloaded") {
+            if (note.state() === "unloaded") {
               note.load();
             }
           });
-          current.chord.play();
+          if (chord.state() === "loaded") {
+            current.chord.play();
+          }
           element.classList.add("active");
         }
       }
@@ -195,7 +197,7 @@
         event.target.classList.add("active");
         const index = Number(event.target.getAttribute("index"));
         const note = current.notes[index];
-        if (note && note.state === "loaded") {
+        if (note && note.state() === "loaded") {
           note.play();
         }
       }
