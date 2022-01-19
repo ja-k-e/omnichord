@@ -195,7 +195,7 @@
         event.target.classList.add("active");
         const index = Number(event.target.getAttribute("index"));
         const note = current.notes[index];
-        if (note) {
+        if (note && note.state === "loaded") {
           note.play();
         }
       }
