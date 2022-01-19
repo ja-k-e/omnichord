@@ -209,8 +209,6 @@
       for (let i = 0; i < 12; i++) {
         const span = document.createElement("span");
         span.setAttribute("index", i);
-        span.addEventListener("mouseenter", handleTouchStart);
-        span.addEventListener("mouseleave", handleTouchEnd);
         span.addEventListener("pointerenter", handleTouchStart);
         span.addEventListener("pointerleave", handleTouchEnd);
         span.addEventListener("pointerdown", (e) =>
