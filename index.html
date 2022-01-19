@@ -8,6 +8,7 @@
     <style>
       * {
         box-sizing: border-box;
+        touch-action: none;
       }
 
       html,
@@ -33,32 +34,85 @@
         color: var(--text);
         font-family: var(--font);
         margin: 0;
+        overflow: hidden;
       }
 
       button {
+        background: var(--off);
         border-radius: 0;
+        color: var(--text);
         font-family: var(--font);
         font-weight: bold;
         font-size: 1.5rem;
+        padding: 0;
       }
 
       main {
         display: flex;
       }
 
+      @media (orientation: portrait) {
+        main {
+          flex-direction: column;
+        }
+
+        #controls {
+          flex-direction: row;
+          height: 66.667%;
+          width: 100%;
+        }
+
+        #controls > div {
+          flex-direction: column;
+          width: 33.33%;
+        }
+
+        #touchbar {
+          flex-direction: row;
+          height: 33.333%;
+        }
+
+        #touchbar > span {
+          height: 100%;
+        }
+      }
+
+      @media (orientation: landscape) {
+        main {
+          flex-direction: row;
+        }
+
+        #controls {
+          flex-direction: column;
+          height: 100%;
+          width: 66.667%;
+        }
+
+        #controls > div {
+          height: 33.33%;
+        }
+
+        #touchbar {
+          flex-direction: column;
+          width: 33.333%;
+        }
+
+        #touchbar > span {
+          width: 100%;
+        }
+      }
+
       #start {
         border: 0;
-        height: calc(100% - 8px);
-        left: 4px;
+        height: 100%;
+        left: 0;
         position: fixed;
-        top: 4px;
-        width: calc(100% - 8px);
+        top: 0;
+        width: 100%;
       }
 
       #controls {
         display: flex;
-        flex-direction: column;
-        width: 66.667%;
       }
 
       #controls > div {
@@ -70,7 +124,8 @@
         border: 1px solid var(--bg);
         display: flex;
         flex: 1;
-        height: calc(var(--grid) * 4);
+        height: 100%;
+        width: 100%;
       }
       #controls > div > button.active {
         background: var(--accent);
@@ -78,14 +133,11 @@
 
       #touchbar {
         display: flex;
-        flex-direction: column;
-        width: 33.333%;
       }
       #touchbar > span {
         background: var(--off);
         display: flex;
-        height: var(--grid);
-        width: 100%;
+        flex: 1;
       }
       #touchbar > span.active {
         background: var(--accent);
@@ -127,36 +179,39 @@
         } else {
           current.chord = chord;
           current.notes = notes;
+          notes.forEach((note) => note.load());
           current.chord.play();
           element.classList.add("active");
         }
       }
 
-      function handleTouchStart({ target }) {
-        target.classList.add("active");
-        const index = Number(target.getAttribute("index"));
+      function handleTouchStart(event) {
+        event.preventDefault();
+        event.target.classList.add("active");
+        const index = Number(event.target.getAttribute("index"));
         const note = current.notes[index];
         if (note) {
           note.play();
         }
       }
 
-      function handleTouchEnd({ target }) {
-        target.classList.remove("active");
-        const index = Number(target.getAttribute("index"));
-        const note = current.notes[index];
-        if (note) {
-          note.stop();
-        }
+      function handleTouchEnd(event) {
+        event.preventDefault();
+        event.target.classList.remove("active");
+        const index = Number(event.target.getAttribute("index"));
       }
 
       for (let i = 0; i < 12; i++) {
         const span = document.createElement("span");
         span.setAttribute("index", i);
         span.addEventListener("mouseenter", handleTouchStart);
-        span.addEventListener("touchstart", handleTouchStart);
         span.addEventListener("mouseleave", handleTouchEnd);
-        span.addEventListener("touchend", handleTouchEnd);
+        span.addEventListener("pointerenter", handleTouchStart);
+        span.addEventListener("pointerleave", handleTouchEnd);
+        span.addEventListener("pointerdown", (e) =>
+          span.releasePointerCapture(e.pointerId)
+        );
+
         touchbar.appendChild(span);
       }
 
@@ -174,12 +229,21 @@
             );
             row.appendChild(button);
             lib[type][root].chord = new Howl({
-              src: [`samples/${type}/${root}/chord.ogg`],
+              src: [
+                // `samples/${type}-${root}-chord.ogg`,
+                `samples/${type}-${root}-chord.mp3`,
+              ],
+              html5: true,
               loop: true,
             });
             for (let i = 0; i < 12; i++) {
               lib[type][root].notes[i] = new Howl({
-                src: [`samples/${type}/${root}/${i}.ogg`],
+                src: [
+                  // `samples/${type}-${root}-${i}.ogg`,
+                  `samples/${type}-${root}-${i}.mp3`,
+                ],
+                html5: true,
+                preload: false,
               });
             }
           });
