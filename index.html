@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Omnichord</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body,
+      main,
+      #controls,
+      #touchbar {
+        height: 100%;
+      }
+
+      :root {
+        --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+          Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        --accent: #ff0;
+        --bg: #000;
+        --off: #111;
+        --text: #fff;
+        --grid: calc(100vh / 12);
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        margin: 0;
+      }
+
+      button {
+        border-radius: 0;
+        font-family: var(--font);
+        font-weight: bold;
+        font-size: 1.5rem;
+      }
+
+      main {
+        display: flex;
+      }
+
+      #start {
+        border: 0;
+        height: calc(100% - 8px);
+        left: 4px;
+        position: fixed;
+        top: 4px;
+        width: calc(100% - 8px);
+      }
+
+      #controls {
+        display: flex;
+        flex-direction: column;
+        width: 66.667%;
+      }
+
+      #controls > div {
+        display: flex;
+      }
+      #controls > div > button {
+        appearance: none;
+        background: var(--off);
+        border: 1px solid var(--bg);
+        display: flex;
+        flex: 1;
+        height: calc(var(--grid) * 4);
+      }
+      #controls > div > button.active {
+        background: var(--accent);
+      }
+
+      #touchbar {
+        display: flex;
+        flex-direction: column;
+        width: 33.333%;
+      }
+      #touchbar > span {
+        background: var(--off);
+        display: flex;
+        height: var(--grid);
+        width: 100%;
+      }
+      #touchbar > span.active {
+        background: var(--accent);
+      }
+
+      #touchbar > span {
+        border: 1px solid var(--bg);
+      }
+    </style>
+  </head>
+  <body>
+    <button id="start">Start</button>
+    <main>
+      <div id="controls"></div>
+      <div id="touchbar"></div>
+    </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <script>
+      const controls = document.getElementById("controls");
+      const start = document.getElementById("start");
+      const touchbar = document.getElementById("touchbar");
+      const types = ["major", "minor", "seventh"];
+      const roots = ["Eb", "Bb", "F", "C", "G", "D", "A", "E", "B"];
+      const lib = {};
+      const current = { chord: null, notes: [] };
+      start.addEventListener("click", initialize);
+
+      function handlePadClick(element, type, root) {
+        document
+          .querySelectorAll("#controls button.active")
+          .forEach((button) => button.classList.remove("active"));
+        if (current.chord) {
+          current.chord.stop();
+        }
+        const { chord, notes } = lib[type][root];
+        if (current.chord === chord) {
+          current.chord = null;
+          current.notes = [];
+        } else {
+          current.chord = chord;
+          current.notes = notes;
+          current.chord.play();
+          element.classList.add("active");
+        }
+      }
+
+      function handleTouchStart({ target }) {
+        target.classList.add("active");
+        const index = Number(target.getAttribute("index"));
+        const note = current.notes[index];
+        if (note) {
+          note.play();
+        }
+      }
+
+      function handleTouchEnd({ target }) {
+        target.classList.remove("active");
+        const index = Number(target.getAttribute("index"));
+        const note = current.notes[index];
+        if (note) {
+          note.stop();
+        }
+      }
+
+      for (let i = 0; i < 12; i++) {
+        const span = document.createElement("span");
+        span.setAttribute("index", i);
+        span.addEventListener("mouseenter", handleTouchStart);
+        span.addEventListener("touchstart", handleTouchStart);
+        span.addEventListener("mouseleave", handleTouchEnd);
+        span.addEventListener("touchend", handleTouchEnd);
+        touchbar.appendChild(span);
+      }
+
+      function initialize() {
+        start.remove();
+        types.forEach((type) => {
+          lib[type] = {};
+          const row = document.createElement("div");
+          controls.appendChild(row);
+          roots.forEach((root) => {
+            lib[type][root] = { chord: null, notes: [] };
+            const button = document.createElement("button");
+            button.addEventListener("click", (e) =>
+              handlePadClick(e.target, type, root)
+            );
+            row.appendChild(button);
+            lib[type][root].chord = new Howl({
+              src: [`samples/${type}/${root}/chord.ogg`],
+              loop: true,
+            });
+            for (let i = 0; i < 12; i++) {
+              lib[type][root].notes[i] = new Howl({
+                src: [`samples/${type}/${root}/${i}.ogg`],
+              });
+            }
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
