@@ -155,39 +155,59 @@
       <div id="controls"></div>
       <div id="touchbar"></div>
     </main>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.36/Tone.min.js"></script>
     <script>
       const controls = document.getElementById("controls");
       const start = document.getElementById("start");
       const touchbar = document.getElementById("touchbar");
       const types = ["major", "minor", "seventh"];
       const roots = ["Eb", "Bb", "F", "C", "G", "D", "A", "E", "B"];
-      const lib = {};
-      const current = { chord: null, notes: [] };
       start.addEventListener("click", initialize);
+      const current = { chord: null, notes: [] };
+      const lib = { major: {}, minor: {}, seventh: {} };
+      const urls = { chord: {}, major: {}, minor: {}, seventh: {} };
+      const samplers = { chord: null, major: null, minor: null, seventh: null };
+      const keys = [];
+      const steps = "C C# D D# E F F# G G# A A# B".split(" ");
+      for (let octave = 0; octave <= 9; octave++) {
+        steps.forEach((step) => keys.push(step + octave));
+      }
+      let chordKeyIdx = 0;
+      types.forEach((type) => {
+        let keyIdx = 0;
+        lib[type] = {};
+        roots.forEach((root) => {
+          lib[type][root] = { chord: null, notes: [] };
+          let key = keys[chordKeyIdx];
+          chordKeyIdx++;
+          urls.chord[key] = `${type}-${root}-chord.mp3`;
+          lib[type][root].chord = key;
+          for (let i = 0; i < 12; i++) {
+            key = keys[keyIdx];
+            keyIdx++;
+            urls[type][key] = `${type}-${root}-${i}.mp3`;
+            lib[type][root].notes[i] = key;
+          }
+        });
+      });
 
       function handlePadClick(element, type, root) {
         document
           .querySelectorAll("#controls button.active")
           .forEach((button) => button.classList.remove("active"));
         if (current.chord) {
-          current.chord.stop();
+          samplers.chord.triggerRelease(current.chord);
         }
         const { chord, notes } = lib[type][root];
-        if (current.chord === chord) {
+        if (current.type === type && current.chord === chord) {
+          current.type = null;
           current.chord = null;
           current.notes = [];
         } else {
+          current.type = type;
           current.chord = chord;
           current.notes = notes;
-          notes.forEach((note) => {
-            if (note.state() === "unloaded") {
-              note.load();
-            }
-          });
-          if (chord.state() === "loaded") {
-            current.chord.play();
-          }
+          samplers.chord.triggerAttack(current.chord);
           element.classList.add("active");
         }
       }
@@ -197,9 +217,7 @@
         event.target.classList.add("active");
         const index = Number(event.target.getAttribute("index"));
         const note = current.notes[index];
-        if (note && note.state() === "loaded") {
-          note.play();
-        }
+        samplers[current.type].triggerAttackRelease(note, 2);
       }
 
       function handleTouchEnd(event) {
@@ -221,36 +239,32 @@
       }
 
       function initialize() {
-        start.remove();
-        types.forEach((type) => {
-          lib[type] = {};
+        const all = Object.keys(samplers);
+        let loadCount = all.length;
+        start.disabled = true;
+        start.innerText = "Loading...";
+        all.forEach((type) => {
+          samplers[type] = new Tone.Sampler({
+            urls: urls[type],
+            baseUrl: "/samples/",
+            onload: () => {
+              loadCount--;
+              if (loadCount <= 0) {
+                start.remove();
+              }
+            },
+          }).toDestination();
+          if (type === "chord") {
+            return;
+          }
           const row = document.createElement("div");
           controls.appendChild(row);
           roots.forEach((root) => {
-            lib[type][root] = { chord: null, notes: [] };
             const button = document.createElement("button");
             button.addEventListener("click", (e) =>
               handlePadClick(e.target, type, root)
             );
             row.appendChild(button);
-            lib[type][root].chord = new Howl({
-              src: [
-                // `samples/${type}-${root}-chord.ogg`,
-                `samples/${type}-${root}-chord.mp3`,
-              ],
-              html5: true,
-              loop: true,
-            });
-            for (let i = 0; i < 12; i++) {
-              lib[type][root].notes[i] = new Howl({
-                src: [
-                  // `samples/${type}-${root}-${i}.ogg`,
-                  `samples/${type}-${root}-${i}.mp3`,
-                ],
-                html5: true,
-                preload: false,
-              });
-            }
           });
         });
       }
