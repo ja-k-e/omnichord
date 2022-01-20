@@ -88,9 +88,14 @@
 
         #controls,
         #beats {
-          flex-direction: column;
           height: 100%;
           width: 8%;
+        }
+        #controls {
+          flex-direction: column-reverse;
+        }
+        #beats {
+          flex-direction: column;
         }
 
         #pads {
@@ -123,10 +128,10 @@
         --accent: #fff;
       }
       #beats {
-        --accent: #f0f;
+        --accent: #ff0;
       }
       #pads {
-        --accent: #ff0;
+        --accent: #f0f;
       }
       #touchbar {
         --accent: #0ff;
@@ -193,6 +198,26 @@
         "swing",
         "waltz",
       ];
+
+      class Players {
+        constructor(urls, baseUrl, onLoaded) {
+          let loadCount = Object.keys(urls).length;
+          this.players = {};
+          for (let key in urls) {
+            this.players[key] = new Tone.Player({
+              url: baseUrl + urls[key],
+              loop: true,
+              onload: () => {
+                loadCount--;
+                if (loadCount <= 0) {
+                  onLoaded();
+                }
+              },
+            }).toDestination();
+          }
+        }
+      }
+
       const roots = ["Eb", "Bb", "F", "C", "G", "D", "A", "E", "B"];
       start.addEventListener("click", initialize);
       const current = { chord: null, notes: [], rhythm: null };
@@ -229,7 +254,7 @@
           .querySelectorAll("#pads button.active")
           .forEach((button) => button.classList.remove("active"));
         if (current.chord) {
-          samplers.chord.triggerRelease(current.chord);
+          samplers.chord.players[current.chord].stop();
         }
         const { chord, notes } = lib[type][root];
         if (current.type === type && current.chord === chord) {
@@ -240,7 +265,7 @@
           current.type = type;
           current.chord = chord;
           current.notes = notes;
-          samplers.chord.triggerAttack(current.chord);
+          samplers.chord.players[current.chord].start();
           element.classList.add("active");
         }
       }
@@ -250,7 +275,9 @@
         event.target.classList.add("active");
         const index = Number(event.target.getAttribute("index"));
         const note = current.notes[index];
-        samplers[current.type].triggerAttackRelease(note, 2);
+        if (current.type) {
+          samplers[current.type].triggerAttackRelease(note, 2);
+        }
       }
 
       function handleTouchEnd(event) {
@@ -314,6 +341,15 @@
           beats.appendChild(button);
         });
         all.forEach((type) => {
+          if (type === "chord") {
+            samplers.chord = new Players(urls.chord, "/samples/", () => {
+              loadCount--;
+              if (loadCount <= 0) {
+                start.remove();
+              }
+            });
+            return;
+          }
           samplers[type] = new Tone.Sampler({
             urls: urls[type],
             baseUrl: "/samples/",
@@ -324,9 +360,6 @@
               }
             },
           }).toDestination();
-          if (type === "chord") {
-            return;
-          }
           const row = document.createElement("div");
           pads.appendChild(row);
           roots.forEach((root) => {
