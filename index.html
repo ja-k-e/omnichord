@@ -14,7 +14,7 @@
       html,
       body,
       main,
-      #controls,
+      #pads,
       #touchbar {
         height: 100%;
       }
@@ -57,24 +57,27 @@
           flex-direction: column;
         }
 
-        #controls {
+        #controls,
+        #beats {
           flex-direction: row;
-          height: 66.667%;
+          height: 8%;
           width: 100%;
         }
 
-        #controls > div {
+        #pads {
+          flex-direction: row;
+          height: 64%;
+          width: 100%;
+        }
+
+        #pads > div {
           flex-direction: column;
           width: 33.33%;
         }
 
         #touchbar {
           flex-direction: row;
-          height: 33.333%;
-        }
-
-        #touchbar > span {
-          height: 100%;
+          height: 20%;
         }
       }
 
@@ -83,23 +86,26 @@
           flex-direction: row;
         }
 
-        #controls {
+        #controls,
+        #beats {
           flex-direction: column;
           height: 100%;
-          width: 66.667%;
+          width: 8%;
         }
 
-        #controls > div {
-          height: 33.33%;
+        #pads {
+          flex-direction: column;
+          height: 100%;
+          width: 64%;
+        }
+
+        #pads > div {
+          height: 33.3333%;
         }
 
         #touchbar {
           flex-direction: column;
-          width: 33.333%;
-        }
-
-        #touchbar > span {
-          width: 100%;
+          width: 20%;
         }
       }
 
@@ -110,42 +116,56 @@
         position: fixed;
         top: 0;
         width: 100%;
+        z-index: 99;
       }
 
       #controls {
+        --accent: #fff;
+      }
+      #beats {
+        --accent: #f0f;
+      }
+      #pads {
+        --accent: #ff0;
+      }
+      #touchbar {
+        --accent: #0ff;
+      }
+
+      #controls,
+      #beats,
+      #pads,
+      #touchbar {
         display: flex;
       }
 
-      #controls > div {
-        display: flex;
-      }
-      #controls > div > button {
+      #controls > button,
+      #beats > button,
+      #pads > div > button,
+      #touchbar > span {
         appearance: none;
-        background: var(--off);
+        background: var(--accent);
         border: 1px solid var(--bg);
         display: flex;
         flex: 1;
         height: 100%;
+        opacity: 0.15;
         width: 100%;
       }
-      #controls > div > button.active {
-        background: var(--accent);
+      #pads > div > button:nth-child(even) {
+        opacity: 0.175;
       }
-
-      #touchbar {
-        display: flex;
-      }
-      #touchbar > span {
-        background: var(--off);
-        display: flex;
-        flex: 1;
-      }
+      #controls > button:active,
+      #beats > button.active,
+      #pads > div > button.active,
       #touchbar > span.active {
-        background: var(--accent);
+        box-shadow: 0 0 2rem var(--accent);
+        opacity: 1;
+        position: relative;
+        z-index: 99;
       }
-
-      #touchbar > span {
-        border: 1px solid var(--bg);
+      #pads > div {
+        display: flex;
       }
     </style>
   </head>
@@ -153,20 +173,33 @@
     <button id="start">Start</button>
     <main>
       <div id="controls"></div>
+      <div id="beats"></div>
+      <div id="pads"></div>
       <div id="touchbar"></div>
     </main>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.36/Tone.min.js"></script>
     <script>
       const controls = document.getElementById("controls");
+      const pads = document.getElementById("pads");
       const start = document.getElementById("start");
       const touchbar = document.getElementById("touchbar");
+      const beats = document.getElementById("beats");
       const types = ["major", "minor", "seventh"];
+      const rhythms = [
+        "foxtrot",
+        "latin",
+        "rock",
+        "slowrock",
+        "swing",
+        "waltz",
+      ];
       const roots = ["Eb", "Bb", "F", "C", "G", "D", "A", "E", "B"];
       start.addEventListener("click", initialize);
-      const current = { chord: null, notes: [] };
+      const current = { chord: null, notes: [], rhythm: null };
       const lib = { major: {}, minor: {}, seventh: {} };
       const urls = { chord: {}, major: {}, minor: {}, seventh: {} };
       const samplers = { chord: null, major: null, minor: null, seventh: null };
+      const players = {};
       const keys = [];
       const steps = "C C# D D# E F F# G G# A A# B".split(" ");
       for (let octave = 0; octave <= 9; octave++) {
@@ -193,7 +226,7 @@
 
       function handlePadClick(element, type, root) {
         document
-          .querySelectorAll("#controls button.active")
+          .querySelectorAll("#pads button.active")
           .forEach((button) => button.classList.remove("active"));
         if (current.chord) {
           samplers.chord.triggerRelease(current.chord);
@@ -243,6 +276,43 @@
         let loadCount = all.length;
         start.disabled = true;
         start.innerText = "Loading...";
+        const slower = document.createElement("button");
+        const faster = document.createElement("button");
+        controls.appendChild(slower);
+        controls.appendChild(faster);
+        slower.addEventListener("click", () =>
+          Object.values(players).forEach(
+            (player) => (player.playbackRate *= 0.95)
+          )
+        );
+        faster.addEventListener("click", () =>
+          Object.values(players).forEach(
+            (player) => (player.playbackRate *= 1.05)
+          )
+        );
+        rhythms.forEach((rhythm) => {
+          players[rhythm] = new Tone.Player({
+            url: `/samples/rhythm-${rhythm}.mp3`,
+            loop: true,
+          }).toDestination();
+          const button = document.createElement("button");
+          button.addEventListener("click", () => {
+            beats
+              .querySelectorAll(".active")
+              .forEach((a) => a.classList.remove("active"));
+            if (current.rhythm) {
+              players[current.rhythm].stop();
+            }
+            if (rhythm === current.rhythm) {
+              current.rhythm = null;
+            } else {
+              button.classList.add("active");
+              players[rhythm].start();
+              current.rhythm = rhythm;
+            }
+          });
+          beats.appendChild(button);
+        });
         all.forEach((type) => {
           samplers[type] = new Tone.Sampler({
             urls: urls[type],
@@ -258,7 +328,7 @@
             return;
           }
           const row = document.createElement("div");
-          controls.appendChild(row);
+          pads.appendChild(row);
           roots.forEach((root) => {
             const button = document.createElement("button");
             button.addEventListener("click", (e) =>
