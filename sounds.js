@@ -10,7 +10,7 @@ const SYNTH_SETTINGS = {
 };
 
 const REVERB_SETTINGS = {
-  wet: 1,
+  wet: 0.5,
   decay: 2,
   preDelay: 0.1,
 };
@@ -21,7 +21,7 @@ export class Sounds {
       const gain = new Tone.Gain(0.3).toDestination();
       const reverb = new Tone.Reverb(REVERB_SETTINGS).connect(gain);
       const delay = new Tone.PingPongDelay(0.25, 0.6).connect(reverb);
-      delay.wet.value = 0.5;
+      delay.wet.value = 0.25;
       this.harp = new Tone.PolySynth(Tone.Synth).connect(delay);
       this.harp.set(SYNTH_SETTINGS);
     }
