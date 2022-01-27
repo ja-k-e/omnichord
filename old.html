@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Omnichord</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        touch-action: none;
+      }
+
+      html,
+      body,
+      main,
+      #pads,
+      #touchbar {
+        height: 100%;
+      }
+
+      :root {
+        --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+          Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        --accent: hotpink;
+        --bg: #000;
+        --off: #111;
+        --text: #fff;
+        --grid: calc(100vh / 12);
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        margin: 0;
+        overflow: hidden;
+        user-select: none;
+      }
+
+      button {
+        align-items: center;
+        background: var(--off);
+        border-radius: 0;
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+        font-family: var(--font);
+        font-weight: bold;
+        font-size: 1rem;
+        justify-content: center;
+        padding: 0;
+      }
+
+      main {
+        display: flex;
+      }
+
+      @media (orientation: portrait) {
+        main {
+          flex-direction: column;
+        }
+
+        #controls,
+        #beats {
+          flex-direction: row;
+          height: 8%;
+          width: 100%;
+        }
+
+        #pads {
+          flex-direction: row;
+          height: 64%;
+          width: 100%;
+        }
+
+        #pads > div {
+          flex-direction: column;
+          width: 33.33%;
+        }
+
+        #touchbar {
+          flex-direction: row;
+          height: 20%;
+        }
+      }
+
+      @media (orientation: landscape) {
+        main {
+          flex-direction: row;
+        }
+
+        #controls,
+        #beats {
+          height: 100%;
+          width: 8%;
+        }
+        #controls {
+          flex-direction: column-reverse;
+        }
+        #beats {
+          flex-direction: column;
+        }
+
+        #pads {
+          flex-direction: column;
+          height: 100%;
+          width: 64%;
+        }
+
+        #pads > div {
+          height: 33.3333%;
+        }
+
+        #touchbar {
+          flex-direction: column;
+          width: 20%;
+        }
+      }
+
+      #start {
+        border: 0;
+        height: 100%;
+        left: 0;
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 99;
+      }
+
+      #controls {
+        --accent: #fff;
+      }
+      #beats {
+        --accent: #ff0;
+      }
+      #pads {
+        --accent: #f0f;
+      }
+      #touchbar {
+        --accent: #0ff;
+      }
+
+      #controls,
+      #beats,
+      #pads,
+      #touchbar {
+        display: flex;
+      }
+
+      #controls > button,
+      #beats > button,
+      #pads > div > button,
+      #touchbar > span {
+        appearance: none;
+        background: var(--accent);
+        border: 1px solid var(--bg);
+        display: flex;
+        flex: 1;
+        height: 100%;
+        opacity: 0.15;
+        width: 100%;
+      }
+      #pads > div > button:nth-child(even) {
+        opacity: 0.175;
+      }
+      #controls > button:active,
+      #beats > button.active,
+      #pads > div > button.active,
+      #touchbar > span.active {
+        box-shadow: 0 0 2rem var(--accent);
+        opacity: 1;
+        position: relative;
+        z-index: 99;
+      }
+      #pads > div {
+        display: flex;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="start">Start</button>
+    <main>
+      <div id="controls"></div>
+      <div id="beats"></div>
+      <div id="pads"></div>
+      <div id="touchbar"></div>
+    </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.36/Tone.min.js"></script>
+    <script>
+      const controls = document.getElementById("controls");
+      const pads = document.getElementById("pads");
+      const start = document.getElementById("start");
+      const touchbar = document.getElementById("touchbar");
+      const beats = document.getElementById("beats");
+      const types = ["major", "minor", "seventh"];
+      const rhythms = [
+        "foxtrot",
+        "latin",
+        "rock",
+        "slowrock",
+        "swing",
+        "waltz",
+      ];
+
+      class Players {
+        constructor(urls, baseUrl, onLoaded) {
+          let loadCount = Object.keys(urls).length;
+          this.players = {};
+          for (let key in urls) {
+            this.players[key] = new Tone.Player({
+              url: baseUrl + urls[key],
+              loop: true,
+              onload: () => {
+                loadCount--;
+                if (loadCount <= 0) {
+                  onLoaded();
+                }
+              },
+            }).toDestination();
+          }
+        }
+      }
+
+      const roots = ["Eb", "Bb", "F", "C", "G", "D", "A", "E", "B"];
+      start.addEventListener("click", initialize);
+      const current = { chord: null, notes: [], rhythm: null };
+      const lib = { major: {}, minor: {}, seventh: {} };
+      const urls = { chord: {}, major: {}, minor: {}, seventh: {} };
+      const samplers = { chord: null, major: null, minor: null, seventh: null };
+      const players = {};
+      const keys = [];
+      const steps = "C C# D D# E F F# G G# A A# B".split(" ");
+      for (let octave = 0; octave <= 9; octave++) {
+        steps.forEach((step) => keys.push(step + octave));
+      }
+      let chordKeyIdx = 0;
+      types.forEach((type) => {
+        let keyIdx = 0;
+        lib[type] = {};
+        roots.forEach((root) => {
+          lib[type][root] = { chord: null, notes: [] };
+          let key = keys[chordKeyIdx];
+          chordKeyIdx++;
+          urls.chord[key] = `${type}-${root}-chord.mp3`;
+          lib[type][root].chord = key;
+          for (let i = 0; i < 12; i++) {
+            key = keys[keyIdx];
+            keyIdx++;
+            urls[type][key] = `${type}-${root}-${i}.mp3`;
+            lib[type][root].notes[i] = key;
+          }
+        });
+      });
+
+      function handlePadClick(element, type, root) {
+        document
+          .querySelectorAll("#pads button.active")
+          .forEach((button) => button.classList.remove("active"));
+        if (current.chord) {
+          samplers.chord.players[current.chord].stop();
+        }
+        const { chord, notes } = lib[type][root];
+        if (current.type === type && current.chord === chord) {
+          current.type = null;
+          current.chord = null;
+          current.notes = [];
+        } else {
+          current.type = type;
+          current.chord = chord;
+          current.notes = notes;
+          samplers.chord.players[current.chord].start();
+          element.classList.add("active");
+        }
+      }
+
+      function handleTouchStart(event) {
+        event.preventDefault();
+        event.target.classList.add("active");
+        const index = Number(event.target.getAttribute("index"));
+        const note = current.notes[index];
+        if (current.type) {
+          samplers[current.type].triggerAttackRelease(note, 2);
+        }
+      }
+
+      function handleTouchEnd(event) {
+        event.preventDefault();
+        event.target.classList.remove("active");
+        const index = Number(event.target.getAttribute("index"));
+      }
+
+      for (let i = 0; i < 12; i++) {
+        const span = document.createElement("span");
+        span.setAttribute("index", i);
+        span.addEventListener("pointerenter", handleTouchStart);
+        span.addEventListener("pointerleave", handleTouchEnd);
+        span.addEventListener("pointerdown", (e) =>
+          span.releasePointerCapture(e.pointerId)
+        );
+
+        touchbar.appendChild(span);
+      }
+
+      function initialize() {
+        const all = Object.keys(samplers);
+        let loadCount = all.length;
+        start.disabled = true;
+        start.innerText = "Loading...";
+        const slower = document.createElement("button");
+        const faster = document.createElement("button");
+        controls.appendChild(slower);
+        controls.appendChild(faster);
+        slower.addEventListener("click", () =>
+          Object.values(players).forEach(
+            (player) => (player.playbackRate *= 0.95)
+          )
+        );
+        faster.addEventListener("click", () =>
+          Object.values(players).forEach(
+            (player) => (player.playbackRate *= 1.05)
+          )
+        );
+        rhythms.forEach((rhythm) => {
+          players[rhythm] = new Tone.Player({
+            url: `/samples/rhythm-${rhythm}.mp3`,
+            loop: true,
+          }).toDestination();
+          const button = document.createElement("button");
+          button.addEventListener("click", () => {
+            beats
+              .querySelectorAll(".active")
+              .forEach((a) => a.classList.remove("active"));
+            if (current.rhythm) {
+              players[current.rhythm].stop();
+            }
+            if (rhythm === current.rhythm) {
+              current.rhythm = null;
+            } else {
+              button.classList.add("active");
+              players[rhythm].start();
+              current.rhythm = rhythm;
+            }
+          });
+          beats.appendChild(button);
+        });
+        all.forEach((type) => {
+          if (type === "chord") {
+            samplers.chord = new Players(urls.chord, "/samples/", () => {
+              loadCount--;
+              if (loadCount <= 0) {
+                start.remove();
+              }
+            });
+            return;
+          }
+          samplers[type] = new Tone.Sampler({
+            urls: urls[type],
+            baseUrl: "/samples/",
+            onload: () => {
+              loadCount--;
+              if (loadCount <= 0) {
+                start.remove();
+              }
+            },
+          }).toDestination();
+          const row = document.createElement("div");
+          pads.appendChild(row);
+          roots.forEach((root) => {
+            const button = document.createElement("button");
+            button.innerText = `${root}${
+              type === "minor" ? "m" : type === "seventh" ? "7" : ""
+            }`;
+            button.addEventListener("click", (e) =>
+              handlePadClick(e.target, type, root)
+            );
+            row.appendChild(button);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
