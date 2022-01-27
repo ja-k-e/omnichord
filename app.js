@@ -19,6 +19,7 @@ function render() {
   requestAnimationFrame(render);
   const { height, width } = canvas;
   const isLandscape = width > height;
+  context.fillStyle = "black";
   context.fillRect(0, 0, width, height);
   const chordShape = {
     w: isLandscape ? width * 0.75 : width,
@@ -32,27 +33,26 @@ function render() {
     x: isLandscape ? chordShape.w : 0,
     y: isLandscape ? 0 : chordShape.h,
   };
-  renderRectangle(chordShape, { fill: "black" });
-  renderRectangle(harpShape, { fill: "yellow" });
 
   let y = chordShape.y;
-  const h = chordShape.h / chordTypes.length;
+  let h = chordShape.h / chordTypes.length;
   data.boxes = {};
   chordTypes.forEach((type, i) => {
     const chordForType = chords[type];
     const chordCount = chordForType.length;
     const w = chordShape.w / chordCount;
     let x = chordShape.x;
-    const hue = 360 * (i / chordTypes.length);
     chordForType.forEach((chord, j) => {
-      const alpha = j % 2 === 0 ? 0.4 : 0.5;
+      const alpha = j % 2 === 0 ? 0.1 : 0.2;
+      const add = i % 2 === 0 ? 0.05 : 0;
       const id = i + "-" + j;
-      const fill = `hsla(${hue}, 100%, 60%, ${
-        id === data.currentBoxId ? 1 : alpha
+      const curr = id === data.currentBoxId;
+      const fill = `hsla(0, 0%, ${curr ? 100 : 60}%, ${
+        curr ? 1 : alpha + add
       })`;
       data.boxes[id] = { id, chord, x, y, w, h };
-      renderRectangle({ x, y, w, h }, { fill });
-      context.fillStyle = "white";
+      renderRectangle(data.boxes[id], { fill });
+      context.fillStyle = curr ? "black" : "white";
       context.textAlign = "center";
       context.font = "16px sans-serif";
       context.fillText(chord.label, x + w * 0.5, y + h * 0.5);
@@ -60,18 +60,66 @@ function render() {
     });
     y += h;
   });
+  data.boxes.stepper = { id: "stepper", ...harpShape };
+
   const boxesStates = touch.updatePointers(Object.values(data.boxes));
   for (let boxId in boxesStates) {
-    const state = boxesStates[boxId];
+    const { pointer, state } = boxesStates[boxId];
     if (state) {
       if (touch.initialized) {
-        if (state === "down") {
-          handleChordClick(boxId);
-        }
-        if (state !== "up") {
-          renderRectangle(data.boxes[boxId], { fill: "rgba(255,255,255,0.1)" });
+        if (boxId === "stepper") {
+          handleStepper(pointer, state);
+        } else {
+          if (state === "down") {
+            handleChordClick(boxId);
+          }
+          if (state !== "up") {
+            // renderRectangle(data.boxes[boxId], {
+            //   fill: "rgba(255,255,255,0.1)",
+            // });
+          }
         }
       }
+    }
+  }
+
+  function handleStepper({ x, y }, state) {
+    const box = data.boxes[data.currentBoxId];
+    if (!box) {
+      return;
+    }
+    const {
+      chord: { stepper },
+    } = box;
+    const stepperCount = stepper.length;
+    const a = isLandscape ? y : x;
+    const b = isLandscape ? canvas.height : canvas.width;
+    data.prevStepIdx = data.currStepIdx;
+    data.currStepIdx =
+      a !== undefined ? Math.floor((a / b) * stepperCount) : undefined;
+    let size = (isLandscape ? harpShape.h : harpShape.w) / stepperCount;
+    let relX = harpShape.x;
+    let relY = harpShape.y;
+    const relW = isLandscape ? harpShape.w : size;
+    const relH = isLandscape ? size : harpShape.h;
+    stepper.forEach((s, i) => {
+      if (i === data.currStepIdx) {
+        const shape = { x: relX, y: relY, w: relW, h: relH };
+        renderRectangle(shape, { fill: "white" });
+      }
+      if (isLandscape) {
+        relY += size;
+      } else {
+        relX += size;
+      }
+    });
+
+    if (
+      state !== "up" &&
+      data.currStepIdx !== data.prevStepIdx &&
+      data.currStepIdx !== undefined
+    ) {
+      sounds.triggerHarp(stepper[data.currStepIdx]);
     }
   }
 }
@@ -137,6 +185,7 @@ function getChords() {
         }
       });
     }
+    stepper.reverse();
     const typeLabel =
       type === "maj7" ? "7" : type === "maj" ? "" : type.charAt(0);
     const label = notes[0].notation + typeLabel;

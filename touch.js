@@ -78,19 +78,20 @@ export class Touch {
       const key = Object.keys(this.pointers)[i];
       const a = pointersA[i];
       const z = pointersZ[i];
+      const pointer = pointers[i];
       if (a === z) {
         if (a) {
-          pointerBoxes[a] = "hold";
+          pointerBoxes[a] = { pointer, state: "hold" };
         } else {
           delete this.pointers[key];
         }
       } else if (a) {
-        pointerBoxes[a] = "up";
+        pointerBoxes[a] = { pointer, state: "up" };
         if (z) {
-          pointerBoxes[z] = "down";
+          pointerBoxes[z] = { pointer, state: "down" };
         }
       } else if (z) {
-        pointerBoxes[z] = "down";
+        pointerBoxes[z] = { pointer, state: "down" };
       }
     }
     return pointerBoxes;
