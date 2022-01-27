@@ -167,7 +167,7 @@ function getChords() {
   const chords = {};
   const octaveMin = 2;
   const octaveMax = 6;
-  const octavePad = 4;
+  const octavePad = 3;
   types.forEach((type) => {
     chords[type] = [];
     roots.forEach((_, i) => chords[type].push(chordFromStepAndType(i, type)));
