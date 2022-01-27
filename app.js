@@ -52,9 +52,9 @@ function render() {
       })`;
       data.boxes[id] = { id, chord, x, y, w, h };
       renderRectangle(data.boxes[id], { fill });
-      context.fillStyle = curr ? "black" : "white";
+      context.fillStyle = curr ? "black" : "#777";
       context.textAlign = "center";
-      context.font = "16px sans-serif";
+      context.font = "12px sans-serif bold";
       context.fillText(chord.label, x + w * 0.5, y + h * 0.5);
       x += w;
     });
