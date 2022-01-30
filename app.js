@@ -174,9 +174,11 @@ function getChords() {
   });
 
   function chordFromNotes(notes, type) {
-    const pad = notes.map(({ notation, octave }) => {
-      return `${notation}${octavePad + octave}`;
-    });
+    const pad = [`${notes[0].notation}${octaveMin}`].concat(
+      notes.map(({ notation, octave }) => {
+        return `${notation}${octavePad + octave}`;
+      })
+    );
     const stepper = [];
     for (let o = octaveMin; o <= octaveMax; o++) {
       notes.forEach(({ notation, octave }) => {
