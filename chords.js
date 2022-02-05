@@ -7,11 +7,11 @@ const chordTypeLabels = {
   maj: "",
   min: "m",
   maj7: "7",
-  aug: " aug",
-  dim: " dim",
+  aug: "+",
+  dim: "°",
 };
 // prettier-ignore
-const roots = ["C" , "C#" , "D" , "D#" , "E" , "F" , "F#" , "G" , "G#" , "A" , "A#" , "B"];
+export const roots = ["C" , "C#" , "D" , "D#" , "E" , "F" , "F#" , "G" , "G#" , "A" , "A#" , "B"];
 const octaveMin = 2;
 const octaveMax = 6;
 const octavePad = 3;

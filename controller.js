@@ -1,16 +1,44 @@
-import { chords, chordTypes } from "./chords.js";
+import { chords } from "./chords.js";
 import { Touch } from "./touch.js";
 
 export class Controller {
   constructor(canvas) {
-    this.mode = "config";
-    this.touch = new Touch(canvas, () => Tone.start());
+    const settings = this.saved();
+    this.mode = settings.mode;
+    this._showLabels = settings._showLabels;
+    this.actives = settings.actives;
     this.currentBoxId = null;
-    this.actives = Object.values(chords).reduce((actives, chordArray) => {
-      chordArray.forEach(({ label }) => (actives[label] = 1));
-      return actives;
-    }, {});
+    this.touch = new Touch(canvas, () => Tone.start());
     this.boxes = {};
+  }
+
+  save() {
+    localStorage.setItem(
+      "omnichord",
+      JSON.stringify({
+        _showLabels: this._showLabels,
+        actives: this.actives,
+        mode: this.mode,
+      })
+    );
+  }
+
+  saved() {
+    const defaults = {
+      _showLabels: true,
+      mode: "config",
+      actives: Object.values(chords).reduce((actives, chordArray) => {
+        chordArray.forEach(({ label }) => (actives[label] = 1));
+        return actives;
+      }, {}),
+    };
+    try {
+      const saved = localStorage.getItem("omnichord");
+      const { _showLabels, actives, mode } = JSON.parse(saved);
+      return { ...defaults, _showLabels, mode, actives };
+    } catch (e) {
+      return defaults;
+    }
   }
 
   addBox(box) {
@@ -35,10 +63,22 @@ export class Controller {
     return { chords: this.chords, chordTypes: this.chordTypes };
   }
 
-  toggleMode(toggle, mode) {
-    this.mode = mode || this.mode === "config" ? "player" : "config";
-    toggle.innerText = this.mode === "config" ? "Play" : "Config";
+  text(type) {
+    if (type === "labels") {
+      return this._showLabels ? "Hide Labels" : "Show Labels";
+    } else if (type === "mode") {
+      return this.mode === "config" ? "Play" : "Config";
+    }
+  }
+
+  toggleLabels() {
+    this._showLabels = !this._showLabels;
+  }
+
+  toggleMode() {
+    this.mode = this.mode === "config" ? "player" : "config";
     this.currentBoxId = null;
+    this.save();
   }
 
   handleBox(boxId) {
@@ -46,6 +86,7 @@ export class Controller {
     let release;
     if (this.mode === "config") {
       this.actives[boxId] = this.actives[boxId] ? 0 : 1;
+      this.save();
       return { attack, release };
     }
     if (this.currentBoxId === boxId) {
@@ -64,7 +105,7 @@ export class Controller {
   handleStepper({ x, y }, state, isLandscape) {
     const box = this.boxes[this.currentBoxId];
     this.previousStepIdx = this.currentStepIdx;
-    if (box) {
+    if (box && state !== "up") {
       const stepperCount = box.chord.stepper.length;
       this.currentStepIdx = Math.floor((isLandscape ? y : x) * stepperCount);
     } else {
@@ -76,7 +117,11 @@ export class Controller {
       this.currentStepIdx !== undefined
         ? box.chord.stepper[this.currentStepIdx]
         : undefined;
-    return { box, currentStepIdx: this.currentStepIdx, trigger };
+    return { trigger };
+  }
+
+  get showLabels() {
+    return this.mode === "config" || this._showLabels;
   }
 
   get chords() {

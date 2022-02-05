@@ -1,15 +1,32 @@
 import { Controller } from "./controller.js";
+import { chordTypes, roots } from "./chords.js";
 import { Sounds } from "./sounds.js";
 
 const canvas = document.querySelector("canvas");
 const context = canvas.getContext("2d");
-const toggle = document.getElementById("mode");
+const toggleMode = document.getElementById("mode");
+const toggleLabels = document.getElementById("labels");
 
 const sounds = new Sounds();
 const controller = new Controller(canvas);
-controller.toggleMode(toggle, "config");
-toggle.addEventListener("click", () => {
-  controller.toggleMode(toggle);
+updateDom();
+
+function updateDom() {
+  toggleLabels.innerText = controller.text("labels");
+  toggleMode.innerText = controller.text("mode");
+  if (controller.mode === "config") {
+    toggleLabels.style.display = "initial";
+  } else {
+    toggleLabels.style.display = "none";
+  }
+}
+toggleLabels.addEventListener("click", () => {
+  controller.toggleLabels();
+  updateDom();
+});
+toggleMode.addEventListener("click", () => {
+  controller.toggleMode();
+  updateDom();
   sounds.triggerPadReleaseAll();
 });
 
@@ -39,20 +56,15 @@ function render() {
   const chordTypesCount = chordTypes.length;
   let relY = chordShape.y;
   let relX = chordShape.x;
-  chordTypes.forEach((type, i) => {
+  chordTypes.forEach((type) => {
     const chordForType = chords[type];
     const chordCount = chordForType.length;
 
     let size = (isLandscape ? chordShape.w : chordShape.h) / chordCount;
     const relW = isLandscape ? size : chordShape.w / chordTypesCount;
     const relH = isLandscape ? chordShape.h / chordTypesCount : size;
-    chordForType.forEach((chord, j) => {
-      const alpha = j % 2 === 0 ? 0.1 : 0.2;
-      const add = i % 2 === 0 ? 0.05 : 0;
+    chordForType.forEach((chord) => {
       const curr = controller.highlight(chord);
-      const fill = `hsla(0, 0%, ${curr ? 100 : 60}%, ${
-        curr ? 1 : alpha + add
-      })`;
       const box = controller.addBox({
         id: chord.label,
         chord,
@@ -61,11 +73,19 @@ function render() {
         w: relW,
         h: relH,
       });
-      renderRectangle(box, { fill });
-      context.fillStyle = curr ? "black" : "#777";
-      context.textAlign = "center";
-      context.font = `bold ${Math.round(canvas.width * 0.01)}px sans-serif`;
-      renderText(chord.label, relX + relW * 0.5, relY + relH * 0.5);
+      const fill = fillForChord(box.chord, curr);
+      renderRectangle(box, fill, curr);
+      if (controller.showLabels) {
+        renderChordLabel(
+          chord.label,
+          curr,
+          relW,
+          relH,
+          relX + relW * 0.5,
+          relY + relH * 0.5,
+          fillForChord(box.chord, curr, true)
+        );
+      }
 
       if (isLandscape) {
         relX += size;
@@ -82,6 +102,26 @@ function render() {
     }
   });
   controller.addBox({ id: "stepper", ...harpShape });
+  if (controller.currentBoxId) {
+    const { chord } = controller.boxes[controller.currentBoxId];
+    let size = (isLandscape ? harpShape.h : harpShape.w) / chord.stepper.length;
+    relX = harpShape.x;
+    relY = harpShape.y;
+    const relW = isLandscape ? harpShape.w : size;
+    const relH = isLandscape ? size : harpShape.h;
+    chord.stepper.forEach((_, i) => {
+      const shape = { x: relX, y: relY, w: relW, h: relH };
+      const curr = i === controller.currentStepIdx;
+      renderRectangle(shape, fillForChord(chord, curr), curr);
+      if (isLandscape) {
+        relY += size;
+      } else {
+        relX += size;
+      }
+    });
+  } else {
+    renderRectangle(harpShape, "rgba(255, 255, 255, 0.1)");
+  }
 
   const boxesStates = controller.process();
   for (let boxId in boxesStates) {
@@ -108,34 +148,7 @@ function render() {
   }
 
   function handleStepper({ x, y }, state) {
-    const { box, currentStepIdx, trigger } = controller.handleStepper(
-      { x, y },
-      state,
-      isLandscape
-    );
-
-    if (!box) {
-      return;
-    }
-    const {
-      chord: { stepper },
-    } = box;
-    let size = (isLandscape ? harpShape.h : harpShape.w) / stepper.length;
-    let relX = harpShape.x;
-    let relY = harpShape.y;
-    const relW = isLandscape ? harpShape.w : size;
-    const relH = isLandscape ? size : harpShape.h;
-    stepper.forEach((_, i) => {
-      if (i === currentStepIdx) {
-        const shape = { x: relX, y: relY, w: relW, h: relH };
-        renderRectangle(shape, { fill: "white" });
-      }
-      if (isLandscape) {
-        relY += size;
-      } else {
-        relX += size;
-      }
-    });
+    const { trigger } = controller.handleStepper({ x, y }, state, isLandscape);
 
     if (trigger) {
       sounds.triggerHarp(trigger);
@@ -143,18 +156,56 @@ function render() {
   }
 }
 
-function renderText(text, x, y) {
-  context.fillText(text, x * canvas.width, y * canvas.height);
+function renderChordLabel(text, current, relW, relH, cx, cy, { r, g, b }) {
+  const w = relW * canvas.width;
+  const height = relH * canvas.height;
+  const x = cx * canvas.width;
+  const y = cy * canvas.height;
+  const fontSize = Math.round(Math.min(w, height) * 0.3);
+  context.fillStyle = current
+    ? "rgba(255, 255, 255, 0.95)"
+    : `rgba(${r}, ${g}, ${b}, 0.7)`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.save();
+  context.shadowColor = current
+    ? "rgba(255, 255, 255, 0.4)"
+    : "rgba(0, 0, 0, 0.4)";
+  context.shadowBlur = 1;
+  context.shadowOffsetX = context.shadowOffsetY =
+    fontSize * 0.05 * (current ? -1 : 1);
+  context.font = `600 ${fontSize}px "Andale Mono",monospace`;
+  context.fillText(text, x, y);
+  context.restore();
 }
 
-function renderRectangle({ w, h, x, y }, { fill = "black" }) {
+function fillForChord(chord, isBright, object = false) {
+  const a = isBright ? 1 : 0.4;
+  const offset = chordTypes.indexOf(chord.type);
+  const step = ((1 / 11) * 360) / chordTypes.length;
+  const h = ((roots.indexOf(chord.notation) / 11) * 360 + offset * step) % 360;
+  // const s = { maj: 0.8, min: 0.8, maj7: 0.8, dim: 0.8, aug: 0.8 }[chord.type];
+  const s = 0.85;
+  // const l = { maj: 0.7, min: 0.7, maj7: 0.7, dim: 0.7, aug: 0.7 }[chord.type];
+  const l = 0.9;
+  const rgb = hsvToRgb(h, s, l);
+  return object
+    ? { ...rgb, h, s, l, a }
+    : `rgb(${rgb.r}, ${rgb.g}, ${rgb.b}, ${a})`;
+}
+
+function renderRectangle({ w, h, x, y }, fill, glow) {
+  const gutter = Math.min(canvas.width, canvas.height) * 0.005;
+  w = w * canvas.width - gutter * 2;
+  h = h * canvas.height - gutter * 2;
+  context.save();
+  if (glow) {
+    context.shadowColor = fill;
+    context.shadowBlur = gutter;
+  }
   context.fillStyle = fill;
-  context.fillRect(
-    x * canvas.width,
-    y * canvas.height,
-    w * canvas.width,
-    h * canvas.height
-  );
+  context.fillRect(x * canvas.width + gutter, y * canvas.height + gutter, w, h);
+  context.restore();
 }
 
 let debounced;
@@ -166,6 +217,39 @@ window.addEventListener("resize", () => {
 });
 
 function sizeCanvas() {
-  canvas.height = window.innerHeight * 2;
-  canvas.width = window.innerWidth * 2;
+  canvas.height = window.innerHeight * 1.5;
+  canvas.width = window.innerWidth * 1.5;
+}
+
+function hsvToRgb(h, s, v) {
+  const C = v * s;
+  const hh = h / 60.0;
+  const X = C * (1.0 - Math.abs((hh % 2) - 1.0));
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (hh >= 0 && hh < 1) {
+    r = C;
+    g = X;
+  } else if (hh >= 1 && hh < 2) {
+    r = X;
+    g = C;
+  } else if (hh >= 2 && hh < 3) {
+    g = C;
+    b = X;
+  } else if (hh >= 3 && hh < 4) {
+    g = X;
+    b = C;
+  } else if (hh >= 4 && hh < 5) {
+    r = X;
+    b = C;
+  } else {
+    r = C;
+    b = X;
+  }
+  const m = v - C;
+  r = Math.round((r + m) * 255.0);
+  g = Math.round((g + m) * 255.0);
+  b = Math.round((b + m) * 255.0);
+  return { r, g, b };
 }
