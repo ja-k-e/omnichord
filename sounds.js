@@ -39,4 +39,9 @@ export class Sounds {
   triggerPadRelease(chord) {
     this.synth.triggerRelease(chord.pad);
   }
+  triggerPadReleaseAll() {
+    if (this.synth) {
+      this.synth.releaseAll();
+    }
+  }
 }

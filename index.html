@@ -14,6 +14,10 @@
         user-select: none;
       }
 
+      :root {
+        --gutter: 2rem;
+      }
+
       body {
         margin: 0;
       }
@@ -24,15 +28,20 @@
         width: 100%;
       }
       canvas {
-        left: 0;
+        left: var(--gutter);
         position: fixed;
-        top: 0;
+        top: var(--gutter);
+        width: calc(100% - var(--gutter) * 2);
+        height: calc(100% - var(--gutter) * 2);
       }
     </style>
   </head>
   <body>
+    <button id="mode"></button>
     <canvas></canvas>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.36/Tone.min.js"></script>
+    <script type="module" src="chords.js"></script>
+    <script type="module" src="controller.js"></script>
     <script type="module" src="sounds.js"></script>
     <script type="module" src="touch.js"></script>
     <script type="module" src="app.js"></script>

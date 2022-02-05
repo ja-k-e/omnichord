@@ -38,7 +38,14 @@ export class Touch {
   handleTouchMove(event) {
     this.handleAnyEventOccurred();
     event.preventDefault();
-    const { pointerId: id, clientX: x, clientY: y } = event;
+    const {
+      pointerId: id,
+      offsetX,
+      offsetY,
+      target: { clientWidth, clientHeight },
+    } = event;
+    const x = offsetX / clientWidth;
+    const y = offsetY / clientHeight;
     this.pointers[id] =
       this.pointers[id] || new TouchPointer({ x, y, down: false });
     this.pointers[id].x = x;
@@ -47,7 +54,14 @@ export class Touch {
   handleTouchStart(event) {
     this.handleAnyEventOccurred();
     event.preventDefault();
-    const { pointerId: id, clientX: x, clientY: y } = event;
+    const {
+      pointerId: id,
+      offsetX,
+      offsetY,
+      target: { clientWidth, clientHeight },
+    } = event;
+    const x = offsetX / clientWidth;
+    const y = offsetY / clientHeight;
     this.pointers[id] =
       this.pointers[id] || new TouchPointer({ x, y, down: true });
   }
@@ -61,6 +75,7 @@ export class Touch {
       this.pointers[id].down = false;
     }
   }
+
   updatePointers(boxes) {
     const pointers = Object.values(this.pointers);
     const pointersA = pointers.map(({ box }) => box);
