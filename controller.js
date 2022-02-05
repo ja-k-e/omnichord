@@ -5,7 +5,8 @@ export class Controller {
   constructor(canvas) {
     const settings = this.saved();
     this.mode = settings.mode;
-    this._showLabels = settings._showLabels;
+    this._fixed = settings._fixed;
+    this._labels = settings._labels;
     this.actives = settings.actives;
     this.currentBoxId = null;
     this.touch = new Touch(canvas, () => Tone.start());
@@ -16,7 +17,8 @@ export class Controller {
     localStorage.setItem(
       "omnichord",
       JSON.stringify({
-        _showLabels: this._showLabels,
+        _fixed: this._fixed,
+        _labels: this._labels,
         actives: this.actives,
         mode: this.mode,
       })
@@ -25,17 +27,18 @@ export class Controller {
 
   saved() {
     const defaults = {
-      _showLabels: true,
-      mode: "config",
+      _fixed: false,
+      _labels: true,
       actives: Object.values(chords).reduce((actives, chordArray) => {
         chordArray.forEach(({ label }) => (actives[label] = 1));
         return actives;
       }, {}),
+      mode: "config",
     };
     try {
       const saved = localStorage.getItem("omnichord");
-      const { _showLabels, actives, mode } = JSON.parse(saved);
-      return { ...defaults, _showLabels, mode, actives };
+      const { _fixed, _labels, actives, mode } = JSON.parse(saved);
+      return { ...defaults, _fixed, _labels, actives, mode };
     } catch (e) {
       return defaults;
     }
@@ -63,16 +66,14 @@ export class Controller {
     return { chords: this.chords, chordTypes: this.chordTypes };
   }
 
-  text(type) {
-    if (type === "labels") {
-      return this._showLabels ? "Hide Labels" : "Show Labels";
-    } else if (type === "mode") {
-      return this.mode === "config" ? "Play" : "Config";
-    }
+  toggleFixed() {
+    this._fixed = !this._fixed;
+    this.save();
   }
 
   toggleLabels() {
-    this._showLabels = !this._showLabels;
+    this._labels = !this._labels;
+    this.save();
   }
 
   toggleMode() {
@@ -120,8 +121,8 @@ export class Controller {
     return { trigger };
   }
 
-  get showLabels() {
-    return this.mode === "config" || this._showLabels;
+  showLabels() {
+    return this.mode === "config" || this._labels;
   }
 
   get chords() {
@@ -130,11 +131,15 @@ export class Controller {
     }
     const copy = { ...chords };
     for (let type in copy) {
-      copy[type] = copy[type].filter(({ label }) =>
-        Boolean(this.actives[label])
-      );
-      if (!copy[type].length) {
-        delete copy[type];
+      if (this._fixed) {
+        copy[type] = copy[type].map((a) => (this.actives[a.label] ? a : null));
+      } else {
+        copy[type] = copy[type].filter(({ label }) =>
+          Boolean(this.actives[label])
+        );
+        if (!copy[type].length) {
+          delete copy[type];
+        }
       }
     }
     return copy;

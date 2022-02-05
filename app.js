@@ -4,22 +4,33 @@ import { Sounds } from "./sounds.js";
 
 const canvas = document.querySelector("canvas");
 const context = canvas.getContext("2d");
-const toggleMode = document.getElementById("mode");
+const toggleFixed = document.getElementById("fixed");
 const toggleLabels = document.getElementById("labels");
+const toggleMode = document.getElementById("mode");
 
 const sounds = new Sounds();
 const controller = new Controller(canvas);
 updateDom();
 
 function updateDom() {
-  toggleLabels.innerText = controller.text("labels");
-  toggleMode.innerText = controller.text("mode");
+  toggleFixed.className = controller._fixed ? "active" : "";
+  toggleFixed.innerText = "Fixed";
+  toggleLabels.className = controller._labels ? "active" : "";
+  toggleLabels.innerText = "Labels";
+  toggleMode.className = controller.mode === "config" ? "" : "playing";
+  toggleMode.innerText = controller.mode === "config" ? "play!" : "cfg";
   if (controller.mode === "config") {
+    toggleFixed.style.display = "initial";
     toggleLabels.style.display = "initial";
   } else {
+    toggleFixed.style.display = "none";
     toggleLabels.style.display = "none";
   }
 }
+toggleFixed.addEventListener("click", () => {
+  controller.toggleFixed();
+  updateDom();
+});
 toggleLabels.addEventListener("click", () => {
   controller.toggleLabels();
   updateDom();
@@ -37,7 +48,13 @@ function render() {
   requestAnimationFrame(render);
   const { height, width } = canvas;
   const isLandscape = width > height;
-  context.fillStyle = "black";
+  const bg = controller.currentBoxId
+    ? fillForChord(controller.boxes[controller.currentBoxId].chord, {
+        isDark: true,
+      })
+    : "black";
+  document.body.style.background = bg;
+  context.fillStyle = bg;
   context.fillRect(0, 0, width, height);
   const chordShape = {
     w: isLandscape ? 0.75 : 1,
@@ -64,27 +81,30 @@ function render() {
     const relW = isLandscape ? size : chordShape.w / chordTypesCount;
     const relH = isLandscape ? chordShape.h / chordTypesCount : size;
     chordForType.forEach((chord) => {
-      const curr = controller.highlight(chord);
-      const box = controller.addBox({
-        id: chord.label,
-        chord,
-        x: relX,
-        y: relY,
-        w: relW,
-        h: relH,
-      });
-      const fill = fillForChord(box.chord, curr);
-      renderRectangle(box, fill, curr);
-      if (controller.showLabels) {
-        renderChordLabel(
-          chord.label,
-          curr,
-          relW,
-          relH,
-          relX + relW * 0.5,
-          relY + relH * 0.5,
-          fillForChord(box.chord, curr, true)
-        );
+      // chord is null in fixed view
+      if (chord) {
+        const curr = controller.highlight(chord);
+        const box = controller.addBox({
+          id: chord.label,
+          chord,
+          x: relX,
+          y: relY,
+          w: relW,
+          h: relH,
+        });
+        const fill = fillForChord(box.chord, { isBright: curr });
+        renderRectangle(box, fill, curr);
+        if (controller.showLabels()) {
+          renderChordLabel(
+            chord.label,
+            curr,
+            relW,
+            relH,
+            relX + relW * 0.5,
+            relY + relH * 0.5,
+            fillForChord(box.chord, { isBright: curr, object: true })
+          );
+        }
       }
 
       if (isLandscape) {
@@ -112,7 +132,7 @@ function render() {
     chord.stepper.forEach((_, i) => {
       const shape = { x: relX, y: relY, w: relW, h: relH };
       const curr = i === controller.currentStepIdx;
-      renderRectangle(shape, fillForChord(chord, curr), curr);
+      renderRectangle(shape, fillForChord(chord, { isBright: curr }), curr);
       if (isLandscape) {
         relY += size;
       } else {
@@ -120,7 +140,7 @@ function render() {
       }
     });
   } else {
-    renderRectangle(harpShape, "rgba(255, 255, 255, 0.1)");
+    renderRectangle(harpShape, "rgba(255, 255, 255, 0.05)");
   }
 
   const boxesStates = controller.process();
@@ -174,20 +194,18 @@ function renderChordLabel(text, current, relW, relH, cx, cy, { r, g, b }) {
   context.shadowBlur = 1;
   context.shadowOffsetX = context.shadowOffsetY =
     fontSize * 0.05 * (current ? -1 : 1);
-  context.font = `600 ${fontSize}px "Andale Mono",monospace`;
+  context.font = `600 ${fontSize}px "Andale Mono", "Trebuchet MS", "Lucida Sans Unicode", monospace`;
   context.fillText(text, x, y);
   context.restore();
 }
 
-function fillForChord(chord, isBright, object = false) {
-  const a = isBright ? 1 : 0.4;
+function fillForChord(chord, { isBright, isDark, object } = {}) {
+  const a = 1;
   const offset = chordTypes.indexOf(chord.type);
   const step = ((1 / 11) * 360) / chordTypes.length;
   const h = ((roots.indexOf(chord.notation) / 11) * 360 + offset * step) % 360;
-  // const s = { maj: 0.8, min: 0.8, maj7: 0.8, dim: 0.8, aug: 0.8 }[chord.type];
   const s = 0.85;
-  // const l = { maj: 0.7, min: 0.7, maj7: 0.7, dim: 0.7, aug: 0.7 }[chord.type];
-  const l = 0.9;
+  const l = isBright ? 0.95 : isDark ? 0.2 : 0.3;
   const rgb = hsvToRgb(h, s, l);
   return object
     ? { ...rgb, h, s, l, a }
