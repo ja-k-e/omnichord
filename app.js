@@ -19,11 +19,11 @@ function updateDom() {
   toggleTempo.className = "active";
   toggleTempo.innerText = controller._tempo ? "Tempo" : "Pattern";
   if (controller.mode === "config") {
-    nav.style.display = "flex";
+    nav.classList.add("config");
     configLink.href = "#";
     configLink.text = "Perform";
   } else {
-    nav.style.display = "none";
+    nav.classList.remove("config");
     configLink.href = "#config";
     configLink.text = "Config";
   }
@@ -126,6 +126,7 @@ function render() {
     controller.currentAreaId && controller.areas[controller.currentAreaId]
       ? controller.areas[controller.currentAreaId].chord
       : null;
+  nav.style.display = currentChord ? "none" : "flex";
   const currentFillBright = currentChord
     ? fillForChord(currentChord, { isBright: true })
     : "white";

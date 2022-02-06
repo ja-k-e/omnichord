@@ -76,39 +76,18 @@
         width: var(--harp-width);
         z-index: 999;
       }
+      nav:not(.config) button {
+        display: none;
+      }
       nav > * {
         margin: calc(var(--font-size) * 0.25);
       }
       #config-link {
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-        font-size: calc(var(--font-size) * 1);
-        height: var(--gutter-height);
-        line-height: var(--gutter-height);
-        justify-content: center;
-        line-height: 1;
-        padding: 0 var(--font-size);
-        position: fixed;
-        text-align: center;
-        text-decoration: none;
-        text-transform: lowercase;
-        top: 0;
-        z-index: 9999;
+        margin-top: var(--font-size);
       }
       @media screen and (orientation: portrait) {
-        #config-link {
-          left: 50%;
-          transform: translateX(-50%);
-        }
         nav {
           flex-direction: row;
-        }
-      }
-      @media screen and (orientation: landscape) {
-        #config-link {
-          left: calc(var(--harp-left) + var(--harp-width) * 0.5);
-          transform: translateX(-50%);
         }
       }
       #config-link,
@@ -117,17 +96,17 @@
       #config-link:link,
       #config-link:visited,
       #config-link:focus-visible {
-        color: rgba(255, 255, 255, 0.4);
+        color: white;
       }
     </style>
   </head>
   <body>
-    <a id="config-link" href="#config">Config</a>
     <nav id="config">
       <button id="tempo">Tempo</button>
       <button id="labels">Labels</button>
       <button id="fixed">Fixed</button>
       <button id="invert" class="active">Invert</button>
+      <a id="config-link" href="#config">Config</a>
     </nav>
     <canvas></canvas>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.36/Tone.min.js"></script>
