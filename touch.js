@@ -88,7 +88,6 @@ export class Touch {
       this.pointers[id] || new TouchPointer({ x, y, down: true });
   }
   handleTouchEnd(event) {
-    this.handleAnyEventOccurred();
     event.preventDefault();
     const { pointerId: id } = event;
     if (this.pointers[id]) {
