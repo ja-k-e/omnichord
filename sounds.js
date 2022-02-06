@@ -1,5 +1,5 @@
 const SYNTH_SETTINGS = {
-  oscillator: { type: "sawtooth4" },
+  oscillator: { type: "sawtooth16" },
   envelope: {
     attack: 0.1,
     attackCurve: "exponential",
@@ -11,7 +11,7 @@ const SYNTH_SETTINGS = {
 
 const REVERB_SETTINGS = {
   wet: 0.5,
-  decay: 1.2,
+  decay: 1.4,
   preDelay: 0.1,
 };
 
@@ -37,12 +37,14 @@ export class Sounds {
     this.rate = rate;
     this.rhythmOn = false;
     let load = RHYTHMS.length;
+    const gain = new Tone.Gain(1).toDestination();
+    const filter1 = new Tone.Filter(2400, "lowpass").connect(gain);
+    const filter2 = new Tone.Filter(100, "highpass").connect(filter1);
     this.rhythms = RHYTHMS.map((rhythm) => {
       if (!rhythm) {
         load--;
         return undefined;
       }
-      const gain = new Tone.Gain(0.8).toDestination();
       const player = new Tone.Player({
         url: `/samples/rhythm-${rhythm}.mp3`,
         loop: true,
@@ -50,7 +52,7 @@ export class Sounds {
           load--;
           if (load <= 0) this.loaded = true;
         },
-      }).connect(gain);
+      }).connect(filter2);
       player.playbackRate = rate;
       return player;
     });
@@ -119,18 +121,22 @@ export class Sounds {
   triggerHarp(note) {
     if (!this.harp) {
       const gain = new Tone.Gain(0.2).toDestination();
-      const reverb = new Tone.Reverb(REVERB_SETTINGS).connect(gain);
+      const filter1 = new Tone.Filter(2000, "lowpass").connect(gain);
+      const filter2 = new Tone.Filter(100, "highpass").connect(filter1);
+      const reverb = new Tone.Reverb(REVERB_SETTINGS).connect(filter2);
       const delay = new Tone.PingPongDelay(0.25, 0.3).connect(reverb);
-      delay.wet.value = 0.25;
+      delay.wet.value = 0.3;
       this.harp = new Tone.PolySynth(Tone.Synth).connect(delay);
       this.harp.set(SYNTH_SETTINGS);
     }
-    this.harp.triggerAttackRelease(note, 0.5);
+    this.harp.triggerAttackRelease(note, 0.3);
   }
   triggerPadAttack(chord) {
     if (!this.synth) {
-      const gain = new Tone.Gain(0.3).toDestination();
-      const reverb = new Tone.Reverb(REVERB_SETTINGS).connect(gain);
+      const gain = new Tone.Gain(0.2).toDestination();
+      const filter1 = new Tone.Filter(2000, "lowpass").connect(gain);
+      const filter2 = new Tone.Filter(100, "highpass").connect(filter1);
+      const reverb = new Tone.Reverb(REVERB_SETTINGS).connect(filter2);
       this.synth = new Tone.PolySynth(Tone.Synth).connect(reverb);
       this.synth.set(SYNTH_SETTINGS);
     }

@@ -21,11 +21,11 @@ function updateDom() {
   if (controller.mode === "config") {
     nav.style.display = "flex";
     configLink.href = "#";
-    configLink.innerText = "Perform";
+    configLink.text = "Perform";
   } else {
     nav.style.display = "none";
     configLink.href = "#config";
-    configLink.innerText = "Configure";
+    configLink.text = "Config";
   }
 }
 configLink.addEventListener("click", () =>
@@ -56,7 +56,7 @@ function render() {
   const { height, width } = canvas;
   const isLandscape = width > height;
   const isInvert = controller._invert;
-  const showDrums = controller._rhythm || controller.mode === "config";
+  const showDrums = controller.mode === "config";
   const showTempo = controller.mode === "config";
   const shapeFromShapes = (shapes) => {
     const shape = isLandscape ? shapes.landscape : shapes.portrait;

@@ -40,6 +40,7 @@
         top: 0;
         width: 100%;
       }
+      nav a,
       nav button {
         align-items: center;
         appearance: none;
@@ -78,51 +79,51 @@
       nav > * {
         margin: calc(var(--font-size) * 0.25);
       }
-      nav div {
-        display: flex;
-        align-content: center;
-        align-items: center;
-        justify-content: center;
-      }
-      @media screen and (orientation: landscape) {
-        nav div {
-          flex-direction: column;
-        }
-      }
       #config-link {
         box-sizing: border-box;
-        color: rgba(255, 255, 255, 0.2);
         display: flex;
         flex-direction: column;
-        font-size: calc(var(--font-size) * 0.8);
+        font-size: calc(var(--font-size) * 1);
         height: var(--gutter-height);
+        line-height: var(--gutter-height);
         justify-content: center;
         line-height: 1;
         padding: 0 var(--font-size);
         position: fixed;
-        left: 50%;
-        text-align: left;
+        text-align: center;
         text-decoration: none;
         text-transform: lowercase;
-        transform: translateX(-50%);
         top: 0;
         z-index: 9999;
+      }
+      @media screen and (orientation: portrait) {
+        #config-link {
+          left: 50%;
+          transform: translateX(-50%);
+        }
+        nav {
+          flex-direction: row;
+        }
+      }
+      @media screen and (orientation: landscape) {
+        #config-link {
+          left: calc(var(--harp-left) + var(--harp-width) * 0.5);
+          transform: translateX(-50%);
+        }
       }
       #config-link,
       #config-link:hover,
       #config-link:focus-visible {
-        color: white;
+        color: rgba(255, 255, 255, 0.4);
       }
     </style>
   </head>
   <body>
-    <a id="config-link" href="#config"></a>
+    <a id="config-link" href="#config">Config</a>
     <nav id="config">
-      <div>
-        <button id="tempo">Tempo</button>
-        <button id="labels">Labels</button>
-        <button id="fixed">Fixed</button>
-      </div>
+      <button id="tempo">Tempo</button>
+      <button id="labels">Labels</button>
+      <button id="fixed">Fixed</button>
       <button id="invert" class="active">Invert</button>
     </nav>
     <canvas></canvas>
