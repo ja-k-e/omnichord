@@ -27,6 +27,29 @@ export class Touch {
     });
     this.pointers = {};
   }
+
+  dimensions() {
+    const gutter = Math.min(this.element.width, this.element.height) * 0.005;
+    const X = gutter * 6;
+    const Y = gutter * 6;
+    const W = this.element.width - X * 2;
+    const H = this.element.height - Y * 2;
+    const X_RAT = (X / this.element.width) * 2;
+    const Y_RAT = (Y / this.element.height) * 2;
+    return { gutter, X, Y, W, H, X_RAT, Y_RAT };
+  }
+
+  relative({ x, y, w, h }) {
+    const { X, Y, W, H } = this.dimensions();
+    const wFactor = W / this.element.width;
+    const hFactor = H / this.element.height;
+    w *= wFactor;
+    h *= hFactor;
+    x = x * wFactor + X / this.element.width;
+    y = y * hFactor + Y / this.element.height;
+    return { x, y, w, h };
+  }
+
   handleAnyEventOccurred() {
     if (this.initialized) {
       return;
@@ -82,7 +105,7 @@ export class Touch {
     pointers.forEach((pointer) => (pointer.box = undefined));
     boxes.forEach((box) => {
       pointers.forEach((pointer) => {
-        if (pointer.isInBox(box)) {
+        if (pointer.isInBox(this.relative(box))) {
           pointer.box = box.id;
         }
       });

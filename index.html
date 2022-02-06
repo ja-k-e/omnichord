@@ -8,21 +8,20 @@
     <style>
       * {
         box-sizing: border-box;
+        touch-action: none;
         -moz-user-select: none;
         -webkit-user-select: none;
         user-select: none;
       }
-      body.lock,
-      body.lock * {
-        touch-action: none;
-      }
-
       :root {
-        --gutter: max(30px, min(4vw, 4vh));
+        --font-family: "Andale Mono", "Trebuchet MS", "Lucida Sans Unicode",
+          monospace;
+        --font-size: min(2.5vw, 2.5vh);
       }
 
       body {
         background: #000;
+        font-family: var(--font-family);
         margin: 0;
       }
       html,
@@ -32,58 +31,85 @@
         width: 100%;
       }
       canvas {
-        height: calc(100% - var(--gutter) * 3);
-        left: var(--gutter);
+        height: 100%;
+        left: 0;
         position: fixed;
-        top: var(--gutter);
-        width: calc(100% - var(--gutter) * 2);
+        top: 0;
+        width: 100%;
       }
-      button {
+      nav a,
+      nav button {
         align-items: center;
         appearance: none;
-        color: white;
         background: transparent;
-        background: rgba(255, 255, 255, 0.1);
-        border: none;
         border-radius: 0;
+        border: none;
         box-sizing: border-box;
+        color: white;
         display: flex;
         flex-direction: column;
-        font-size: calc(var(--gutter) * 0.4);
+        font-family: var(--font-family);
+        font-size: var(--font-size);
         font-weight: bold;
         justify-content: center;
-        font-family: "Andale Mono", "Trebuchet MS", "Lucida Sans Unicode",
-          monospace;
-        height: var(--button-height);
-        line-height: var(--button-height);
-        min-width: 80px;
-        margin: 0 calc(var(--button-height) * 0.25);
+        line-height: 2;
+        margin: calc(var(--font-size) * 0.25);
         padding: 0 1rem;
+        text-decoration: none;
         text-transform: uppercase;
         width: 10%;
       }
-      button#fixed:not(.active),
-      button#labels:not(.active) {
+      nav button:not(.active) {
         text-decoration: line-through;
       }
+      nav a {
+        font-style: italic;
+      }
       nav {
-        --button-height: calc(var(--gutter));
-        bottom: 0;
+        align-content: center;
+        align-items: center;
         display: flex;
         justify-content: center;
-        height: calc(var(--gutter) * 2);
-        left: 0;
-        padding: calc(var(--gutter) * 0.5);
+        flex-direction: column;
+        height: var(--harp-height);
+        left: var(--harp-left);
         position: fixed;
-        width: 100%;
+        top: var(--harp-top);
+        width: var(--harp-width);
+        z-index: 999;
+      }
+      #config-link {
+        box-sizing: border-box;
+        color: rgba(255, 255, 255, 0.2);
+        display: flex;
+        flex-direction: column;
+        font-size: var(--font-size);
+        height: var(--gutter-height);
+        justify-content: center;
+        line-height: 1;
+        padding: 0 var(--font-size);
+        position: fixed;
+        right: 0;
+        text-align: left;
+        text-decoration: none;
+        text-transform: uppercase;
+        transform-origin: 100% 0%;
+        transform: rotateZ(90deg) translateX(50%);
+        top: 50%;
+        z-index: 9999;
+      }
+      #config-link:hover,
+      #config-link:focus-visible {
+        color: white;
       }
     </style>
   </head>
   <body>
-    <nav>
-      <button id="fixed"></button>
-      <button id="mode"></button>
-      <button id="labels"></button>
+    <a id="config-link" href="#config"></a>
+    <nav id="config">
+      <button id="labels">Labels</button>
+      <button id="fixed">Fixed</button>
+      <button id="invert">Invert</button>
     </nav>
     <canvas></canvas>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.36/Tone.min.js"></script>

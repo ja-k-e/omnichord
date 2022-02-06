@@ -2,10 +2,16 @@ import { chords } from "./chords.js";
 import { Touch } from "./touch.js";
 
 export class Controller {
-  constructor(canvas) {
+  constructor(canvas, onModeChange) {
+    this.onModeChange = onModeChange;
+    window.addEventListener("hashchange", (e) => {
+      e.preventDefault();
+      this.updateMode();
+    });
+    this.mode = location.hash === "#config" ? "config" : "play";
     const settings = this.saved();
-    this.mode = settings.mode;
     this._fixed = settings._fixed;
+    this._invert = settings._invert;
     this._labels = settings._labels;
     this.actives = settings.actives;
     this.currentBoxId = null;
@@ -18,9 +24,9 @@ export class Controller {
       "omnichord",
       JSON.stringify({
         _fixed: this._fixed,
+        _invert: this._invert,
         _labels: this._labels,
         actives: this.actives,
-        mode: this.mode,
       })
     );
   }
@@ -28,17 +34,17 @@ export class Controller {
   saved() {
     const defaults = {
       _fixed: false,
+      _invert: false,
       _labels: true,
       actives: Object.values(chords).reduce((actives, chordArray) => {
         chordArray.forEach(({ label }) => (actives[label] = 1));
         return actives;
       }, {}),
-      mode: "config",
     };
     try {
       const saved = localStorage.getItem("omnichord");
-      const { _fixed, _labels, actives, mode } = JSON.parse(saved);
-      return { ...defaults, _fixed, _labels, actives, mode };
+      const { _fixed, _invert, _labels, actives } = JSON.parse(saved);
+      return { ...defaults, _fixed, _invert, _labels, actives };
     } catch (e) {
       return defaults;
     }
@@ -57,6 +63,12 @@ export class Controller {
     }
   }
 
+  updateMode() {
+    this.mode = location.hash === "#config" ? "config" : "play";
+    this.currentBoxId = null;
+    this.onModeChange();
+  }
+
   process() {
     return this.touch.updatePointers(Object.values(this.boxes));
   }
@@ -70,15 +82,13 @@ export class Controller {
     this._fixed = !this._fixed;
     this.save();
   }
-
-  toggleLabels() {
-    this._labels = !this._labels;
+  toggleInvert() {
+    this._invert = !this._invert;
     this.save();
   }
 
-  toggleMode() {
-    this.mode = this.mode === "config" ? "player" : "config";
-    this.currentBoxId = null;
+  toggleLabels() {
+    this._labels = !this._labels;
     this.save();
   }
 
@@ -103,10 +113,13 @@ export class Controller {
     return { attack, release };
   }
 
-  handleStepper({ x, y }, state, isLandscape) {
+  handleStepper(pointer, state, isLandscape) {
     const box = this.boxes[this.currentBoxId];
     this.previousStepIdx = this.currentStepIdx;
     if (box && state !== "up") {
+      const { X_RAT, Y_RAT } = this.touch.dimensions();
+      const x = (pointer.x - X_RAT) / (1 - X_RAT * 2);
+      const y = (pointer.y - Y_RAT) / (1 - Y_RAT * 2);
       const stepperCount = box.chord.stepper.length;
       this.currentStepIdx = Math.floor((isLandscape ? y : x) * stepperCount);
     } else {
@@ -119,10 +132,6 @@ export class Controller {
         ? box.chord.stepper[this.currentStepIdx]
         : undefined;
     return { trigger };
-  }
-
-  showLabels() {
-    return this.mode === "config" || this._labels;
   }
 
   get chords() {

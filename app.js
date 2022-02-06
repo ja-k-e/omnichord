@@ -4,43 +4,44 @@ import { Sounds } from "./sounds.js";
 
 const canvas = document.querySelector("canvas");
 const context = canvas.getContext("2d");
+const nav = document.querySelector("nav");
 const toggleFixed = document.getElementById("fixed");
+const toggleInvert = document.getElementById("invert");
 const toggleLabels = document.getElementById("labels");
-const toggleMode = document.getElementById("mode");
+const configLink = document.getElementById("config-link");
 
 const sounds = new Sounds();
-const controller = new Controller(canvas);
+const controller = new Controller(canvas, () => {
+  updateDom();
+  sounds.triggerPadReleaseAll();
+});
 updateDom();
 
 function updateDom() {
   toggleFixed.className = controller._fixed ? "active" : "";
-  toggleFixed.innerText = "Fixed";
+  toggleInvert.className = controller._invert ? "active" : "";
   toggleLabels.className = controller._labels ? "active" : "";
-  toggleLabels.innerText = "Labels";
-  toggleMode.className = controller.mode === "config" ? "" : "playing";
-  toggleMode.innerText = controller.mode === "config" ? "play!" : "cfg";
   if (controller.mode === "config") {
-    document.body.classList.remove("lock");
-    toggleFixed.style.display = "initial";
-    toggleLabels.style.display = "initial";
+    nav.style.display = "flex";
+    configLink.href = "#";
+    configLink.innerText = "Play!";
   } else {
-    document.body.classList.add("lock");
-    toggleFixed.style.display = "none";
-    toggleLabels.style.display = "none";
+    nav.style.display = "none";
+    configLink.href = "#config";
+    configLink.innerText = "Configure";
   }
 }
 toggleFixed.addEventListener("click", () => {
   controller.toggleFixed();
   updateDom();
 });
+toggleInvert.addEventListener("click", () => {
+  controller.toggleInvert();
+  updateDom();
+});
 toggleLabels.addEventListener("click", () => {
   controller.toggleLabels();
   updateDom();
-});
-toggleMode.addEventListener("click", () => {
-  controller.toggleMode();
-  updateDom();
-  sounds.triggerPadReleaseAll();
 });
 
 sizeCanvas();
@@ -50,6 +51,7 @@ function render() {
   requestAnimationFrame(render);
   const { height, width } = canvas;
   const isLandscape = width > height;
+  const isInvert = controller._invert;
   const bg = controller.currentBoxId
     ? fillForChord(controller.boxes[controller.currentBoxId].chord, {
         isDark: true,
@@ -58,18 +60,18 @@ function render() {
   document.body.style.background = bg;
   context.fillStyle = bg;
   context.fillRect(0, 0, width, height);
-  const chordShape = {
+  const chordShape = controller.touch.relative({
     w: isLandscape ? 0.75 : 1,
     h: isLandscape ? 1 : 0.75,
-    x: 0,
-    y: 0,
-  };
-  const harpShape = {
+    x: isInvert ? (isLandscape ? 0.25 : 0) : 0,
+    y: isInvert ? (isLandscape ? 0 : 0.25) : 0,
+  });
+  const harpShape = controller.touch.relative({
     w: isLandscape ? 0.25 : 1,
     h: isLandscape ? 1 : 0.25,
-    x: isLandscape ? chordShape.w : 0,
-    y: isLandscape ? 0 : chordShape.h,
-  };
+    x: isInvert ? 0 : isLandscape ? 0.75 : 0,
+    y: isInvert ? 0 : isLandscape ? 0 : 0.75,
+  });
   const { chords } = controller.tick();
   const chordTypes = Object.keys(chords);
   const chordTypesCount = chordTypes.length;
@@ -96,16 +98,12 @@ function render() {
         });
         const fill = fillForChord(box.chord, { isBright: curr });
         renderRectangle(box, fill, curr);
-        if (controller.showLabels()) {
-          renderChordLabel(
-            chord.label,
-            curr,
-            relW,
-            relH,
-            relX + relW * 0.5,
-            relY + relH * 0.5,
-            fillForChord(box.chord, { isBright: curr, object: true })
-          );
+        if (controller._labels) {
+          const fill = fillForChord(box.chord, {
+            isBright: curr,
+            object: true,
+          });
+          renderChordLabel(chord.label, curr, relW, relH, relX, relY, fill);
         }
       }
 
@@ -144,6 +142,14 @@ function render() {
   } else {
     renderRectangle(harpShape, "rgba(255, 255, 255, 0.05)");
   }
+  const { X_RAT, Y_RAT } = controller.touch.dimensions();
+  const { x, y, w, h } = controller.touch.relative(harpShape);
+  document.body.style.setProperty("--harp-height", h * 100 + "%");
+  document.body.style.setProperty("--harp-width", w * 100 + "%");
+  document.body.style.setProperty("--harp-left", x * 100 + "%");
+  document.body.style.setProperty("--harp-top", y * 100 + "%");
+  document.body.style.setProperty("--gutter-width", X_RAT * 100 + "%");
+  document.body.style.setProperty("--gutter-height", Y_RAT * 100 + "%");
 
   const boxesStates = controller.process();
   for (let boxId in boxesStates) {
@@ -178,12 +184,13 @@ function render() {
   }
 }
 
-function renderChordLabel(text, current, relW, relH, cx, cy, { r, g, b }) {
-  const w = relW * canvas.width;
-  const height = relH * canvas.height;
-  const x = cx * canvas.width;
-  const y = cy * canvas.height;
-  const fontSize = Math.round(Math.min(w, height) * 0.3);
+function renderChordLabel(text, current, relW, relH, relX, relY, { r, g, b }) {
+  const { W, H, X, Y } = controller.touch.dimensions();
+  const w = relW * W;
+  const h = relH * H;
+  const x = w * 0.5 + relX * W + X;
+  const y = h * 0.5 + relY * H + Y;
+  const fontSize = Math.round(Math.min(w, h) * 0.3);
   context.fillStyle = current
     ? "rgba(255, 255, 255, 0.95)"
     : `rgba(${r}, ${g}, ${b}, 0.7)`;
@@ -215,16 +222,18 @@ function fillForChord(chord, { isBright, isDark, object } = {}) {
 }
 
 function renderRectangle({ w, h, x, y }, fill, glow) {
-  const gutter = Math.min(canvas.width, canvas.height) * 0.005;
-  w = w * canvas.width - gutter * 2;
-  h = h * canvas.height - gutter * 2;
+  const { gutter, X, Y, W, H } = controller.touch.dimensions();
+  w = w * W - gutter * 2;
+  h = h * H - gutter * 2;
+  x = x * W + gutter + X;
+  y = y * H + gutter + Y;
   context.save();
   if (glow) {
     context.shadowColor = fill;
     context.shadowBlur = gutter;
   }
   context.fillStyle = fill;
-  context.fillRect(x * canvas.width + gutter, y * canvas.height + gutter, w, h);
+  context.fillRect(x, y, w, h);
   context.restore();
 }
 
