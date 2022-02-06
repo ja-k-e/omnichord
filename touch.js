@@ -4,10 +4,10 @@ export class TouchPointer {
     this.x = x;
     this.y = y;
   }
-  isInBox({ x, y, w, h }) {
-    const inBox =
+  isInArea({ x, y, w, h }) {
+    const inArea =
       this.x >= x && this.x < x + w && this.y >= y && this.y < y + h;
-    return inBox && this.down ? "down" : null;
+    return inArea && this.down ? "down" : null;
   }
 }
 
@@ -30,16 +30,16 @@ export class Touch {
 
   dimensions() {
     const gutter = Math.min(this.element.width, this.element.height) * 0.005;
-    const X = gutter * 6;
-    const Y = gutter * 6;
+    const X = gutter * 12;
+    const Y = gutter * 12;
     const W = this.element.width - X * 2;
     const H = this.element.height - Y * 2;
-    const X_RAT = (X / this.element.width) * 2;
-    const Y_RAT = (Y / this.element.height) * 2;
+    const X_RAT = X / this.element.width;
+    const Y_RAT = Y / this.element.height;
     return { gutter, X, Y, W, H, X_RAT, Y_RAT };
   }
 
-  relative({ x, y, w, h }) {
+  relateArea({ x, y, w, h }) {
     const { X, Y, W, H } = this.dimensions();
     const wFactor = W / this.element.width;
     const hFactor = H / this.element.height;
@@ -59,7 +59,6 @@ export class Touch {
   }
 
   handleTouchMove(event) {
-    this.handleAnyEventOccurred();
     event.preventDefault();
     const {
       pointerId: id,
@@ -99,19 +98,19 @@ export class Touch {
     }
   }
 
-  updatePointers(boxes) {
+  updatePointers(areas) {
     const pointers = Object.values(this.pointers);
-    const pointersA = pointers.map(({ box }) => box);
-    pointers.forEach((pointer) => (pointer.box = undefined));
-    boxes.forEach((box) => {
+    const pointersA = pointers.map(({ area }) => area);
+    pointers.forEach((pointer) => (pointer.area = undefined));
+    areas.forEach((area) => {
       pointers.forEach((pointer) => {
-        if (pointer.isInBox(this.relative(box))) {
-          pointer.box = box.id;
+        if (pointer.isInArea(this.relateArea(area))) {
+          pointer.area = area.id;
         }
       });
     });
-    const pointersZ = pointers.map(({ box }) => box);
-    const pointerBoxes = {};
+    const pointersZ = pointers.map(({ area }) => area);
+    const pointerAreas = {};
     for (let i = 0; i < pointersA.length; i++) {
       const key = Object.keys(this.pointers)[i];
       const a = pointersA[i];
@@ -119,19 +118,19 @@ export class Touch {
       const pointer = pointers[i];
       if (a === z) {
         if (a) {
-          pointerBoxes[a] = { pointer, state: "hold" };
+          pointerAreas[a] = { pointer, state: "hold" };
         } else {
           delete this.pointers[key];
         }
       } else if (a) {
-        pointerBoxes[a] = { pointer, state: "up" };
+        pointerAreas[a] = { pointer, state: "up" };
         if (z) {
-          pointerBoxes[z] = { pointer, state: "down" };
+          pointerAreas[z] = { pointer, state: "down" };
         }
       } else if (z) {
-        pointerBoxes[z] = { pointer, state: "down" };
+        pointerAreas[z] = { pointer, state: "down" };
       }
     }
-    return pointerBoxes;
+    return pointerAreas;
   }
 }

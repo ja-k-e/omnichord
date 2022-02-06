@@ -16,13 +16,16 @@
       :root {
         --font-family: "Andale Mono", "Trebuchet MS", "Lucida Sans Unicode",
           monospace;
-        --font-size: min(2.5vw, 2.5vh);
+        --font-size: max(min(2vw, 2vh), 1rem);
       }
 
       body {
         background: #000;
         font-family: var(--font-family);
         margin: 0;
+      }
+      body.resizing > * {
+        opacity: 0;
       }
       html,
       body,
@@ -37,7 +40,6 @@
         top: 0;
         width: 100%;
       }
-      nav a,
       nav button {
         align-items: center;
         appearance: none;
@@ -52,18 +54,13 @@
         font-size: var(--font-size);
         font-weight: bold;
         justify-content: center;
-        line-height: 2;
-        margin: calc(var(--font-size) * 0.25);
-        padding: 0 1rem;
+        line-height: 1;
+        padding: calc(var(--font-size) * 0.25) calc(var(--font-size) * 0.5);
         text-decoration: none;
-        text-transform: uppercase;
-        width: 10%;
+        text-transform: lowercase;
       }
       nav button:not(.active) {
         text-decoration: line-through;
-      }
-      nav a {
-        font-style: italic;
       }
       nav {
         align-content: center;
@@ -78,24 +75,37 @@
         width: var(--harp-width);
         z-index: 999;
       }
+      nav > * {
+        margin: calc(var(--font-size) * 0.25);
+      }
+      nav div {
+        display: flex;
+        align-content: center;
+        align-items: center;
+        justify-content: center;
+      }
+      @media screen and (orientation: landscape) {
+        nav div {
+          flex-direction: column;
+        }
+      }
       #config-link {
         box-sizing: border-box;
         color: rgba(255, 255, 255, 0.2);
         display: flex;
         flex-direction: column;
-        font-size: var(--font-size);
+        font-size: calc(var(--font-size) * 0.8);
         height: var(--gutter-height);
         justify-content: center;
         line-height: 1;
         padding: 0 var(--font-size);
         position: fixed;
-        right: 0;
+        left: 50%;
         text-align: left;
         text-decoration: none;
-        text-transform: uppercase;
-        transform-origin: 100% 0%;
-        transform: rotateZ(90deg) translateX(50%);
-        top: 50%;
+        text-transform: lowercase;
+        transform: translateX(-50%);
+        top: 0;
         z-index: 9999;
       }
       #config-link,
@@ -108,9 +118,12 @@
   <body>
     <a id="config-link" href="#config"></a>
     <nav id="config">
-      <button id="labels">Labels</button>
-      <button id="fixed">Fixed</button>
-      <button id="invert">Invert</button>
+      <div>
+        <button id="tempo">Tempo</button>
+        <button id="labels">Labels</button>
+        <button id="fixed">Fixed</button>
+      </div>
+      <button id="invert" class="active">Invert</button>
     </nav>
     <canvas></canvas>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.36/Tone.min.js"></script>

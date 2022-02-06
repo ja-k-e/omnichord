@@ -1,22 +1,37 @@
 import { chords } from "./chords.js";
 import { Touch } from "./touch.js";
+import { Sounds } from "./sounds.js";
 
 export class Controller {
   constructor(canvas, onModeChange) {
+    this.sounds = new Sounds();
     this.onModeChange = onModeChange;
     window.addEventListener("hashchange", (e) => {
       e.preventDefault();
       this.updateMode();
+      this.sounds.stopAll();
     });
-    this.mode = location.hash === "#config" ? "config" : "play";
+    this.mode = location.hash === "#config" ? "config" : "perform";
     const settings = this.saved();
+    // this._chord = settings._chord; // TODO: playing the chord or not
     this._fixed = settings._fixed;
     this._invert = settings._invert;
     this._labels = settings._labels;
+    this._rate = settings._rate;
+    this._rhythm = settings._rhythm;
+    this._tempo = settings._tempo;
     this.actives = settings.actives;
-    this.currentBoxId = null;
-    this.touch = new Touch(canvas, () => Tone.start());
-    this.boxes = {};
+    this.currentAreaId = null;
+    this.touch = new Touch(canvas, () => {
+      Tone.start();
+      this.sounds.initialize(this._rhythm, this._rate || 1);
+    });
+    this.areas = {};
+  }
+
+  addArea(area) {
+    this.areas[area.id] = area;
+    return area;
   }
 
   save() {
@@ -26,6 +41,9 @@ export class Controller {
         _fixed: this._fixed,
         _invert: this._invert,
         _labels: this._labels,
+        _rate: this._rate,
+        _rhythm: this._rhythm,
+        _tempo: this._tempo,
         actives: this.actives,
       })
     );
@@ -36,6 +54,9 @@ export class Controller {
       _fixed: false,
       _invert: false,
       _labels: true,
+      _rate: 1,
+      _rhythm: "NONE",
+      _tempo: true,
       actives: Object.values(chords).reduce((actives, chordArray) => {
         chordArray.forEach(({ label }) => (actives[label] = 1));
         return actives;
@@ -43,95 +64,169 @@ export class Controller {
     };
     try {
       const saved = localStorage.getItem("omnichord");
-      const { _fixed, _invert, _labels, actives } = JSON.parse(saved);
-      return { ...defaults, _fixed, _invert, _labels, actives };
+      const { _fixed, _invert, _labels, _rate, _rhythm, _tempo, actives } =
+        JSON.parse(saved);
+      return {
+        ...defaults,
+        _fixed,
+        _invert,
+        _labels,
+        _rate,
+        _rhythm,
+        _tempo,
+        actives,
+      };
     } catch (e) {
       return defaults;
     }
-  }
-
-  addBox(box) {
-    this.boxes[box.id] = box;
-    return box;
   }
 
   highlight(chord) {
     if (this.mode === "config") {
       return Boolean(this.actives[chord.label]);
     } else {
-      return this.currentBoxId === chord.label;
+      return this.currentAreaId === chord.label;
     }
   }
 
   updateMode() {
-    this.mode = location.hash === "#config" ? "config" : "play";
-    this.currentBoxId = null;
+    this.mode = location.hash === "#config" ? "config" : "perform";
+    this.currentAreaId = null;
     this.onModeChange();
   }
 
-  process() {
-    return this.touch.updatePointers(Object.values(this.boxes));
+  process(harpShape) {
+    const states = this.touch.updatePointers(Object.values(this.areas));
+    for (let areaId in states) {
+      const { pointer, state } = states[areaId];
+      if (state) {
+        if (this.touch.initialized) {
+          if (
+            areaId === "tempo-plus" ||
+            areaId === "tempo-minus" ||
+            areaId === "rhythm"
+          ) {
+            this.handleRhythm(state, areaId);
+          } else if (areaId === "stepper") {
+            this.handleStepper(pointer, state, harpShape);
+          } else if (state === "down") {
+            this.handlePad(areaId);
+          }
+        }
+      }
+    }
   }
 
   tick() {
-    this.boxes = {};
+    this.areas = {};
     return { chords: this.chords, chordTypes: this.chordTypes };
   }
 
-  toggleFixed() {
-    this._fixed = !this._fixed;
-    this.save();
-  }
-  toggleInvert() {
-    this._invert = !this._invert;
-    this.save();
-  }
-
-  toggleLabels() {
-    this._labels = !this._labels;
-    this.save();
-  }
-
-  handleBox(boxId) {
-    let attack;
-    let release;
-    if (this.mode === "config") {
-      this.actives[boxId] = this.actives[boxId] ? 0 : 1;
-      this.save();
-      return { attack, release };
+  toggle(value) {
+    switch (value) {
+      case "fixed":
+        this._fixed = !this._fixed;
+        break;
+      case "invert":
+        this._invert = !this._invert;
+        break;
+      case "labels":
+        this._labels = !this._labels;
+        break;
+      case "tempo":
+        this._tempo = !this._tempo;
+        break;
     }
-    if (this.currentBoxId === boxId) {
-      this.currentBoxId = undefined;
-      release = this.boxes[boxId].chord;
-    } else {
-      if (this.currentBoxId) {
-        release = this.boxes[this.currentBoxId].chord;
+    this.touch.handleAnyEventOccurred();
+    this.save();
+  }
+
+  handleRhythm(state, id) {
+    const handlePlus = () => {
+      if (this._tempo) {
+        this._rate = this.sounds.tempo("up");
+      } else {
+        this._rhythm = this.sounds.rhythmNext();
       }
-      this.currentBoxId = boxId;
-      attack = this.boxes[boxId].chord;
+    };
+    const handleMinus = () => {
+      if (this._tempo) {
+        this._rate = this.sounds.tempo("down");
+      } else {
+        this._rhythm = this.sounds.rhythmPrev();
+      }
+    };
+    const handleRhythm = () => {
+      if (this.sounds.loaded) {
+        this.sounds.triggerRhythm();
+      }
+    };
+    if (state === "down") {
+      this.touch.handleAnyEventOccurred();
+      switch (id) {
+        case "tempo-plus":
+          handlePlus();
+          return;
+        case "tempo-minus":
+          handleMinus();
+          return;
+        case "rhythm":
+          handleRhythm();
+          return;
+      }
     }
-    return { attack, release };
+    this.save();
   }
 
-  handleStepper(pointer, state, isLandscape) {
-    const box = this.boxes[this.currentBoxId];
+  handlePad(areaId) {
+    if (this.mode === "config") {
+      this.actives[areaId] = this.actives[areaId] ? 0 : 1;
+      this.save();
+      return;
+    }
+    if (this.currentAreaId === areaId) {
+      this.currentAreaId = undefined;
+      this.sounds.triggerPadRelease(this.areas[areaId].chord);
+    } else {
+      if (this.currentAreaId) {
+        this.sounds.triggerPadRelease(this.areas[this.currentAreaId].chord);
+      }
+      this.currentAreaId = areaId;
+      this.sounds.triggerPadAttack(this.areas[areaId].chord);
+    }
+  }
+
+  handleStepper(pointer, state, harpShape) {
+    const relative = this.touch.relateArea(harpShape);
+    const landscape = relative.w < relative.h;
+    const area = this.areas[this.currentAreaId];
     this.previousStepIdx = this.currentStepIdx;
-    if (box && state !== "up") {
-      const { X_RAT, Y_RAT } = this.touch.dimensions();
-      const x = (pointer.x - X_RAT) / (1 - X_RAT * 2);
-      const y = (pointer.y - Y_RAT) / (1 - Y_RAT * 2);
-      const stepperCount = box.chord.stepper.length;
-      this.currentStepIdx = Math.floor((isLandscape ? y : x) * stepperCount);
+    if (area && state !== "up") {
+      const perc = landscape
+        ? (pointer.y - relative.y) / relative.h
+        : (pointer.x - relative.x) / relative.w;
+      let inc = 0;
+      this.currentStepIdx = -1;
+      const step = 1 / area.chord.stepper.length;
+      area.chord.stepper.forEach(() => {
+        inc += step;
+        if (perc <= inc) {
+          this.currentStepIdx++;
+        }
+      });
     } else {
       this.currentStepIdx = undefined;
     }
-    const trigger =
+    if (
       state !== "up" &&
       this.currentStepIdx !== this.previousStepIdx &&
       this.currentStepIdx !== undefined
-        ? box.chord.stepper[this.currentStepIdx]
-        : undefined;
-    return { trigger };
+    ) {
+      const index = landscape
+        ? area.chord.stepper.length - 1 - this.currentStepIdx
+        : this.currentStepIdx;
+      this.sounds.triggerHarp(area.chord.stepper[index]);
+    }
   }
 
   get chords() {
