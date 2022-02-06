@@ -20,9 +20,11 @@ function updateDom() {
   toggleMode.className = controller.mode === "config" ? "" : "playing";
   toggleMode.innerText = controller.mode === "config" ? "play!" : "cfg";
   if (controller.mode === "config") {
+    document.body.classList.remove("lock");
     toggleFixed.style.display = "initial";
     toggleLabels.style.display = "initial";
   } else {
+    document.body.classList.add("lock");
     toggleFixed.style.display = "none";
     toggleLabels.style.display = "none";
   }

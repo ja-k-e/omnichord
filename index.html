@@ -8,10 +8,13 @@
     <style>
       * {
         box-sizing: border-box;
-        touch-action: none;
         -moz-user-select: none;
         -webkit-user-select: none;
         user-select: none;
+      }
+      body.lock,
+      body.lock * {
+        touch-action: none;
       }
 
       :root {
