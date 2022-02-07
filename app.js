@@ -344,7 +344,7 @@ function renderChordLabel(
   const h = relH * H;
   const x = w * 0.5 + relX * W + X;
   const y = h * 0.5 + relY * H + Y;
-  const fontSize = Math.min(maxFontSize, Math.round(Math.min(w, h) * 0.3));
+  const fontSize = Math.min(maxFontSize, Math.round(Math.min(w, h) * 0.25));
   context.fillStyle = highlighted
     ? "rgba(255, 255, 255, 0.95)"
     : `rgba(${r}, ${g}, ${b}, 0.7)`;

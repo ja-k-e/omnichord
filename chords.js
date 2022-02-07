@@ -2,13 +2,14 @@ import { intervalNotes } from "https://unpkg.com/musical-scale@1.0.3/index.js";
 export const chords = {};
 
 // export const chordTypes = ["maj", "min", "maj7"];
-export const chordTypes = ["maj", "min", "maj7", "aug", "dim"];
+export const chordTypes = ["maj", "min", "maj7", "aug", "dim", "dom7"];
 const chordTypeLabels = {
   maj: "",
   min: "m",
-  maj7: "7",
+  maj7: "M7",
   aug: "+",
   dim: "°",
+  dom7: "7",
 };
 // prettier-ignore
 export const roots = ["C" , "C#" , "D" , "D#" , "E" , "F" , "F#" , "G" , "G#" , "A" , "A#" , "B"];
@@ -46,6 +47,11 @@ function chordFromStepAndType(rootIdx, type) {
     const indexMin = roots.indexOf(notes[1].notation);
     const min = intervalNotes(indexMin, notes[1].octave, "min");
     return chordFromNotes(notes.concat(min[2]), type);
+  } else if (type === "dom7") {
+    const notes = intervalNotes(rootIdx, 0, "maj");
+    const indexMin = roots.indexOf(notes[1].notation);
+    const dim = intervalNotes(indexMin, notes[1].octave, "dim");
+    return chordFromNotes(notes.concat(dim[2]), type);
   }
   return chordFromNotes(intervalNotes(rootIdx, 0, type), type);
 }
