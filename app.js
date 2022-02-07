@@ -5,6 +5,7 @@ const canvas = document.querySelector("canvas");
 const context = canvas.getContext("2d");
 const nav = document.querySelector("nav");
 const toggleFixed = document.getElementById("fixed");
+const toggleFx = document.getElementById("fx");
 const toggleInvert = document.getElementById("invert");
 const toggleLabels = document.getElementById("labels");
 const toggleTempo = document.getElementById("tempo");
@@ -15,6 +16,7 @@ updateDom();
 
 function updateDom() {
   toggleFixed.className = controller._fixed ? "active" : "";
+  toggleFx.className = controller._fx ? "active" : "";
   toggleLabels.className = controller._labels ? "active" : "";
   toggleTempo.className = "active";
   toggleTempo.innerText = controller._tempo ? "Tempo" : "Pattern";
@@ -33,6 +35,11 @@ configLink.addEventListener("click", () =>
 );
 toggleFixed.addEventListener("click", () => {
   controller.toggle("fixed");
+  updateDom();
+});
+toggleFx.addEventListener("click", () => {
+  controller.toggle("fx");
+  controller.handleFx();
   updateDom();
 });
 toggleInvert.addEventListener("click", () => {

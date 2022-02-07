@@ -36,9 +36,9 @@ export class Sounds {
     this.rate = rate;
     this.rhythmOn = false;
     let load = RHYTHMS.length;
-    const gain = new Tone.Gain(1).toDestination();
-    const filter1 = new Tone.Filter(2400, "lowpass").connect(gain);
-    const filter2 = new Tone.Filter(100, "highpass").connect(filter1);
+    this.rhythmOut = new Tone.Gain(1).toDestination();
+    const filter1 = new Tone.Filter(2400, "lowpass").connect(this.rhythmOut);
+    this.rhythmIn = new Tone.Filter(100, "highpass").connect(filter1);
     this.rhythms = RHYTHMS.map((rhythm) => {
       if (!rhythm) {
         load--;
@@ -51,7 +51,7 @@ export class Sounds {
           load--;
           if (load <= 0) this.loaded = true;
         },
-      }).connect(filter2);
+      }).connect(this.fx ? this.rhythmIn : this.rhythmOut);
       player.playbackRate = rate;
       return player;
     });
@@ -87,6 +87,38 @@ export class Sounds {
     }
   }
 
+  fxOn() {
+    this.fx = true;
+    this.rhythms.forEach((rhythm) => {
+      rhythm.disconnect(this.rhythmOut);
+      rhythm.connect(this.rhythmIn);
+    });
+    if (this.harp) {
+      this.harp.disconnect(this.harpOut);
+      this.harp.connect(this.harpIn);
+    }
+    if (this.synth) {
+      this.synth.disconnect(this.synthOut);
+      this.synth.connect(this.synthIn);
+    }
+  }
+
+  fxOff() {
+    this.fx = false;
+    this.rhythms.forEach((rhythm) => {
+      rhythm.connect(this.rhythmOut);
+      rhythm.disconnect(this.rhythmIn);
+    });
+    if (this.harp) {
+      this.harp.connect(this.harpOut);
+      this.harp.disconnect(this.harpIn);
+    }
+    if (this.synth) {
+      this.synth.connect(this.synthOut);
+      this.synth.disconnect(this.synthIn);
+    }
+  }
+
   stopAll() {
     if (this.synth) {
       this.synth.releaseAll();
@@ -119,24 +151,28 @@ export class Sounds {
 
   triggerHarp(note) {
     if (!this.harp) {
-      const gain = new Tone.Gain(0.2).toDestination();
-      const filter1 = new Tone.Filter(2000, "lowpass").connect(gain);
+      this.harpOut = new Tone.Gain(0.2).toDestination();
+      const filter1 = new Tone.Filter(2000, "lowpass").connect(this.harpOut);
       const filter2 = new Tone.Filter(100, "highpass").connect(filter1);
       const reverb = new Tone.Reverb(REVERB_SETTINGS).connect(filter2);
-      const delay = new Tone.PingPongDelay(0.25, 0.3).connect(reverb);
-      delay.wet.value = 0.3;
-      this.harp = new Tone.PolySynth(Tone.Synth).connect(delay);
+      this.harpIn = new Tone.PingPongDelay(0.25, 0.3).connect(reverb);
+      this.harpIn.wet.value = 0.3;
+      this.harp = new Tone.PolySynth(Tone.Synth).connect(
+        this.fx ? this.harpIn : this.harpOut
+      );
       this.harp.set(SYNTH_SETTINGS);
     }
     this.harp.triggerAttackRelease(note, 0.3);
   }
   triggerPadAttack(chord) {
     if (!this.synth) {
-      const gain = new Tone.Gain(0.2).toDestination();
-      const filter1 = new Tone.Filter(2000, "lowpass").connect(gain);
+      this.synthOut = new Tone.Gain(0.2).toDestination();
+      const filter1 = new Tone.Filter(2000, "lowpass").connect(this.synthOut);
       const filter2 = new Tone.Filter(100, "highpass").connect(filter1);
-      const reverb = new Tone.Reverb(REVERB_SETTINGS).connect(filter2);
-      this.synth = new Tone.PolySynth(Tone.Synth).connect(reverb);
+      this.synthIn = new Tone.Reverb(REVERB_SETTINGS).connect(filter2);
+      this.synth = new Tone.PolySynth(Tone.Synth).connect(
+        this.fx ? this.synthIn : this.synthOut
+      );
       this.synth.set(SYNTH_SETTINGS);
     }
     this.synth.triggerAttack(chord.pad);

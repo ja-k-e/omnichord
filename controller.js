@@ -15,18 +15,20 @@ export class Controller {
     const settings = this.saved();
     // this._chord = settings._chord; // TODO: playing the chord or not
     this._fixed = settings._fixed;
+    this._fx = settings._fx === undefined ? true : settings._fx;
     this._invert = settings._invert;
     this._labels = settings._labels;
     this._rate = settings._rate;
     this._rhythm = settings._rhythm;
     this._tempo = settings._tempo;
     this.actives = settings.actives;
+    this.areas = {};
     this.currentAreaId = null;
+    this.handleFx();
     this.touch = new Touch(canvas, () => {
       Tone.start();
       this.sounds.initialize(this._rhythm, this._rate || 1);
     });
-    this.areas = {};
   }
 
   addArea(area) {
@@ -34,11 +36,20 @@ export class Controller {
     return area;
   }
 
+  handleFx() {
+    if (this._fx) {
+      this.sounds.fxOn();
+    } else {
+      this.sounds.fxOff();
+    }
+  }
+
   save() {
     localStorage.setItem(
       "omnichord",
       JSON.stringify({
         _fixed: this._fixed,
+        _fx: this._fx,
         _invert: this._invert,
         _labels: this._labels,
         _rate: this._rate,
@@ -52,6 +63,7 @@ export class Controller {
   saved() {
     const defaults = {
       _fixed: false,
+      _fx: true,
       _invert: false,
       _labels: true,
       _rate: 1,
@@ -64,11 +76,12 @@ export class Controller {
     };
     try {
       const saved = localStorage.getItem("omnichord");
-      const { _fixed, _invert, _labels, _rate, _rhythm, _tempo, actives } =
+      const { _fixed, _fx, _invert, _labels, _rate, _rhythm, _tempo, actives } =
         JSON.parse(saved);
       return {
         ...defaults,
         _fixed,
+        _fx,
         _invert,
         _labels,
         _rate,
@@ -135,6 +148,8 @@ export class Controller {
         break;
       case "tempo":
         this._tempo = !this._tempo;
+      case "fx":
+        this._fx = !this._fx;
         break;
     }
     this.touch.handleAnyEventOccurred();
