@@ -323,7 +323,7 @@
         );
         rhythms.forEach((rhythm) => {
           players[rhythm] = new Tone.Player({
-            url: `/samples/rhythm-${rhythm}.mp3`,
+            url: `samples/rhythm-${rhythm}.mp3`,
             loop: true,
           }).toDestination();
           const button = document.createElement("button");
@@ -346,7 +346,7 @@
         });
         all.forEach((type) => {
           if (type === "chord") {
-            samplers.chord = new Players(urls.chord, "/samples/", () => {
+            samplers.chord = new Players(urls.chord, "samples/", () => {
               loadCount--;
               if (loadCount <= 0) {
                 start.remove();
@@ -356,7 +356,7 @@
           }
           samplers[type] = new Tone.Sampler({
             urls: urls[type],
-            baseUrl: "/samples/",
+            baseUrl: "samples/",
             onload: () => {
               loadCount--;
               if (loadCount <= 0) {
