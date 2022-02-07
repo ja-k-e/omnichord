@@ -55,7 +55,7 @@ export class Controller {
       _invert: false,
       _labels: true,
       _rate: 1,
-      _rhythm: "NONE",
+      _rhythm: "foxtrot",
       _tempo: true,
       actives: Object.values(chords).reduce((actives, chordArray) => {
         chordArray.forEach(({ label }) => (actives[label] = 1));

@@ -413,8 +413,8 @@ window.addEventListener("resize", () => {
 });
 
 function sizeCanvas() {
-  canvas.height = window.innerHeight * 1.5;
-  canvas.width = window.innerWidth * 1.5;
+  canvas.height = window.innerHeight * 2;
+  canvas.width = window.innerWidth * 2;
   document.body.classList.remove("resizing");
 }
 

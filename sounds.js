@@ -16,7 +16,6 @@ const REVERB_SETTINGS = {
 };
 
 export const RHYTHMS = [
-  undefined,
   "foxtrot",
   "latin",
   "rock",
