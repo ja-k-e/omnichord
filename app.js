@@ -342,7 +342,10 @@ function render() {
       object: true,
     });
     renderRectangle(chordShape, `rgba(${r}, ${g}, ${b},0.8)`);
-    const fontSize = Math.round(Math.min(canvas.width, canvas.height) * 0.02);
+    const fontSize = Math.max(
+      30,
+      Math.round(Math.min(canvas.width, canvas.height) * 0.02)
+    );
     context.fillStyle = "rgba(255, 255, 255, 0.95)";
     context.textAlign = "center";
     context.textBaseline = "middle";
@@ -351,11 +354,12 @@ function render() {
       chordShape.x + chordShape.w * 0.5 * canvas.width,
       chordShape.y + chordShape.h * 0.5 * canvas.height
     );
-    context.shadowColor = "rgba(255, 255, 255, 0.4)";
-    context.shadowBlur = 1;
-    context.shadowOffsetX = context.shadowOffsetY = fontSize * -0.05;
-    context.font = `600 ${fontSize}px "Andale Mono", "Trebuchet MS", "Lucida Sans Unicode", monospace`;
-    context.fillText("tap anywhere\nto start", 0, 0);
+    context.font = `italic 600 ${fontSize}px "Andale Mono", "Trebuchet MS", "Lucida Sans Unicode", monospace`;
+    const message =
+      controller.sounds.loaded === undefined
+        ? "tap anywhere to start"
+        : "loading...";
+    context.fillText(message, 0, 0);
     context.restore();
   }
 }
