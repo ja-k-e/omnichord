@@ -2,7 +2,7 @@ import { intervalNotes } from "https://unpkg.com/musical-scale@1.0.3/index.js";
 export const chords = {};
 
 // export const chordTypes = ["maj", "min", "maj7"];
-export const chordTypes = ["maj", "min", "maj7", "dom7", "aug", "dim"];
+export const chordTypes = ["maj", "maj7", "dom7", "min", "aug", "dim"];
 const chordTypeLabels = {
   maj: "",
   min: "m",

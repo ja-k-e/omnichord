@@ -30,9 +30,7 @@ function updateDom() {
     configLink.text = "Config";
   }
 }
-configLink.addEventListener("click", () =>
-  controller.touch.handleAnyEventOccurred()
-);
+nav.addEventListener("click", () => controller.touch.handleAnyEventOccurred());
 toggleFixed.addEventListener("click", () => {
   controller.toggle("fixed");
   updateDom();
@@ -337,6 +335,29 @@ function render() {
   document.body.style.setProperty("--gutter-height", Y_RAT * 100 + "%");
 
   controller.process(harpShape);
+
+  if (!controller.touch.initialized && controller.mode !== "config") {
+    const { r, g, b } = fillForChord(currentChord, {
+      isDark: true,
+      object: true,
+    });
+    renderRectangle(chordShape, `rgba(${r}, ${g}, ${b},0.8)`);
+    const fontSize = Math.round(Math.min(canvas.width, canvas.height) * 0.02);
+    context.fillStyle = "rgba(255, 255, 255, 0.95)";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.save();
+    context.translate(
+      chordShape.x + chordShape.w * 0.5 * canvas.width,
+      chordShape.y + chordShape.h * 0.5 * canvas.height
+    );
+    context.shadowColor = "rgba(255, 255, 255, 0.4)";
+    context.shadowBlur = 1;
+    context.shadowOffsetX = context.shadowOffsetY = fontSize * -0.05;
+    context.font = `600 ${fontSize}px "Andale Mono", "Trebuchet MS", "Lucida Sans Unicode", monospace`;
+    context.fillText("tap anywhere\nto start", 0, 0);
+    context.restore();
+  }
 }
 
 function renderChordLabel(

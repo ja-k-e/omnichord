@@ -25,10 +25,9 @@ export class Controller {
     this.areas = {};
     this.currentAreaId = null;
     this.handleFx();
-    this.touch = new Touch(canvas, () => {
-      Tone.start();
-      this.sounds.initialize(this._rhythm, this._rate || 1);
-    });
+    this.touch = new Touch(canvas, () =>
+      this.sounds.initialize(this._rhythm, this._rate || 1)
+    );
   }
 
   addArea(area) {
@@ -152,7 +151,6 @@ export class Controller {
         this._fx = !this._fx;
         break;
     }
-    this.touch.handleAnyEventOccurred();
     this.save();
   }
 
@@ -177,7 +175,6 @@ export class Controller {
       }
     };
     if (state === "down") {
-      this.touch.handleAnyEventOccurred();
       switch (id) {
         case "tempo-plus":
           handlePlus();

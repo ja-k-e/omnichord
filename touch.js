@@ -22,6 +22,7 @@ export class Touch {
     element.addEventListener("pointercancel", this.handleTouchEnd.bind(this));
     element.addEventListener("pointerout", this.handleTouchEnd.bind(this));
     element.addEventListener("pointerdown", (e) => {
+      this.handleAnyEventOccurred();
       this.handleTouchStart(e);
       element.releasePointerCapture(e.pointerId);
     });
@@ -50,16 +51,19 @@ export class Touch {
     return { x, y, w, h };
   }
 
-  handleAnyEventOccurred() {
+  async handleAnyEventOccurred() {
     if (this.initialized) {
       return;
     }
+    await this.onInitialized();
     this.initialized = true;
-    this.onInitialized();
   }
 
   handleTouchMove(event) {
     event.preventDefault();
+    if (!this.initialized) {
+      return;
+    }
     const {
       pointerId: id,
       offsetX,
@@ -74,8 +78,10 @@ export class Touch {
     this.pointers[id].y = y;
   }
   handleTouchStart(event) {
-    this.handleAnyEventOccurred();
     event.preventDefault();
+    if (!this.initialized) {
+      return;
+    }
     const {
       pointerId: id,
       offsetX,
@@ -89,6 +95,9 @@ export class Touch {
   }
   handleTouchEnd(event) {
     event.preventDefault();
+    if (!this.initialized) {
+      return;
+    }
     const { pointerId: id } = event;
     if (this.pointers[id]) {
       this.pointers[id].x = Infinity;

@@ -16,7 +16,11 @@
       :root {
         --font-family: "Andale Mono", "Trebuchet MS", "Lucida Sans Unicode",
           monospace;
-        --font-size: max(min(2vw, 2vh), 1rem);
+        --font-size: max(min(1.8vw, 1.8vh), 1rem);
+        --harp-height: 100%;
+        --harp-left: 0;
+        --harp-top: 0;
+        --harp-width: 100%;
       }
 
       body {
@@ -81,9 +85,12 @@
         display: none;
       }
       nav > * {
-        margin: calc(var(--font-size) * 0.25);
+        margin: calc(var(--font-size) * 0.0625);
       }
       #config-link {
+        font-style: italic;
+      }
+      #config-link[href="#"] {
         margin-top: var(--font-size);
       }
       @media screen and (orientation: portrait) {

@@ -31,29 +31,59 @@ export class Sounds {
   }
 
   initialize(rhythm, rate) {
-    this.loaded = false;
-    this.rhythmIndex = Math.max(0, RHYTHMS.indexOf(rhythm));
-    this.rate = rate;
-    this.rhythmOn = false;
-    let load = RHYTHMS.length;
-    this.rhythmOut = new Tone.Gain(1).toDestination();
-    const filter1 = new Tone.Filter(2400, "lowpass").connect(this.rhythmOut);
-    this.rhythmIn = new Tone.Filter(100, "highpass").connect(filter1);
-    this.rhythms = RHYTHMS.map((rhythm) => {
-      if (!rhythm) {
-        load--;
-        return undefined;
-      }
-      const player = new Tone.Player({
-        url: `/samples/rhythm-${rhythm}.mp3`,
-        loop: true,
-        onload: () => {
+    return new Promise(async (resolve) => {
+      await Tone.start();
+
+      this.loaded = false;
+      this.rhythmIndex = Math.max(0, RHYTHMS.indexOf(rhythm));
+      this.rate = rate;
+
+      this.harpOut = new Tone.Gain(0.2).toDestination();
+      const filter1 = new Tone.Filter(2000, "lowpass").connect(this.harpOut);
+      const filter2 = new Tone.Filter(100, "highpass").connect(filter1);
+      const reverb = new Tone.Reverb(REVERB_SETTINGS).connect(filter2);
+      this.harpIn = new Tone.PingPongDelay(0.25, 0.3).connect(reverb);
+      this.harpIn.wet.value = 0.3;
+      this.harp = new Tone.PolySynth(Tone.Synth).connect(
+        this.fx ? this.harpIn : this.harpOut
+      );
+      this.harp.polyphony = 16;
+      this.harp.set(SYNTH_SETTINGS);
+
+      this.synthOut = new Tone.Gain(0.2).toDestination();
+      const filter3 = new Tone.Filter(2000, "lowpass").connect(this.synthOut);
+      const filter4 = new Tone.Filter(100, "highpass").connect(filter3);
+      this.synthIn = new Tone.Reverb(REVERB_SETTINGS).connect(filter4);
+      this.synth = new Tone.PolySynth(Tone.Synth).connect(
+        this.fx ? this.synthIn : this.synthOut
+      );
+      this.synth.polyphony = 6;
+      this.synth.set(SYNTH_SETTINGS);
+
+      this.rhythmOn = false;
+      let load = RHYTHMS.length;
+      this.rhythmOut = new Tone.Gain(1).toDestination();
+      const filter5 = new Tone.Filter(2400, "lowpass").connect(this.rhythmOut);
+      this.rhythmIn = new Tone.Filter(100, "highpass").connect(filter5);
+      this.rhythms = RHYTHMS.map((rhythm) => {
+        if (!rhythm) {
           load--;
-          if (load <= 0) this.loaded = true;
-        },
-      }).connect(this.fx ? this.rhythmIn : this.rhythmOut);
-      player.playbackRate = rate;
-      return player;
+          return undefined;
+        }
+        const player = new Tone.Player({
+          url: `/samples/rhythm-${rhythm}.mp3`,
+          loop: true,
+          onload: () => {
+            load--;
+            if (load <= 0) {
+              this.loaded = true;
+              resolve();
+            }
+          },
+        }).connect(this.fx ? this.rhythmIn : this.rhythmOut);
+        player.playbackRate = rate;
+        return player;
+      });
     });
   }
 
@@ -150,34 +180,20 @@ export class Sounds {
   }
 
   triggerHarp(note) {
-    if (!this.harp) {
-      this.harpOut = new Tone.Gain(0.2).toDestination();
-      const filter1 = new Tone.Filter(2000, "lowpass").connect(this.harpOut);
-      const filter2 = new Tone.Filter(100, "highpass").connect(filter1);
-      const reverb = new Tone.Reverb(REVERB_SETTINGS).connect(filter2);
-      this.harpIn = new Tone.PingPongDelay(0.25, 0.3).connect(reverb);
-      this.harpIn.wet.value = 0.3;
-      this.harp = new Tone.PolySynth(Tone.Synth).connect(
-        this.fx ? this.harpIn : this.harpOut
-      );
-      this.harp.set(SYNTH_SETTINGS);
+    if (this.harp) {
+      this.harp.triggerAttackRelease(note, 0.3);
     }
-    this.harp.triggerAttackRelease(note, 0.3);
   }
+
   triggerPadAttack(chord) {
-    if (!this.synth) {
-      this.synthOut = new Tone.Gain(0.2).toDestination();
-      const filter1 = new Tone.Filter(2000, "lowpass").connect(this.synthOut);
-      const filter2 = new Tone.Filter(100, "highpass").connect(filter1);
-      this.synthIn = new Tone.Reverb(REVERB_SETTINGS).connect(filter2);
-      this.synth = new Tone.PolySynth(Tone.Synth).connect(
-        this.fx ? this.synthIn : this.synthOut
-      );
-      this.synth.set(SYNTH_SETTINGS);
+    if (this.synth) {
+      this.synth.triggerAttack(chord.pad);
     }
-    this.synth.triggerAttack(chord.pad);
   }
+
   triggerPadRelease(chord) {
-    this.synth.triggerRelease(chord.pad);
+    if (this.synth) {
+      this.synth.triggerRelease(chord.pad);
+    }
   }
 }
