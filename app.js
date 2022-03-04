@@ -407,8 +407,8 @@ function fillForChord(chord, { isBright, isDark, object } = {}) {
     lFact = 0.7;
   } else {
     const offset = chordTypes.indexOf(chord.type);
-    const step = ((1 / 11) * 360) / chordTypes.length;
-    h = ((roots.indexOf(chord.notation) / 11) * 360 + offset * step) % 360;
+    const step = ((1 / 12) * 360) / chordTypes.length;
+    h = ((roots.indexOf(chord.notation) / 12) * 360 + offset * step) % 360;
     s = 0.85;
   }
   const a = 1;
