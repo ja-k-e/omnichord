@@ -1,28 +1,24 @@
-import { intervalNotes } from "https://unpkg.com/musical-scale@1.0.3/index.js";
+import {
+  chordFromStepAndType,
+  CHORD_TYPES,
+  STEP_NOTATIONS,
+} from "https://unpkg.com/musical-scale@1.0.4/index.js";
 export const chords = {};
-
-// export const chordTypes = ["maj", "min", "maj7"];
-export const chordTypes = ["maj", "maj7", "dom7", "min", "min7", "aug", "dim"];
-const chordTypeLabels = {
-  maj: "",
-  min: "m",
-  min7: "m7",
-  maj7: "M7",
-  aug: "+",
-  dim: "°",
-  dom7: "7",
-};
-// prettier-ignore
-export const roots = ["C" , "C#" , "D" , "D#" , "E" , "F" , "F#" , "G" , "G#" , "A" , "A#" , "B"];
+export const chordTypes = CHORD_TYPES;
+export const roots = STEP_NOTATIONS;
 const octaveMin = 2;
 const octaveMax = 6;
 const octavePad = 3;
 chordTypes.forEach((type) => {
   chords[type] = [];
-  roots.forEach((_, i) => chords[type].push(chordFromStepAndType(i, type)));
+  roots.forEach((_, i) => {
+    const chord = chordFromStepAndType(i, type);
+    chords[type].push(chordWithPadAndStepper(chord));
+  });
 });
 
-function chordFromNotes(notes, type) {
+function chordWithPadAndStepper(chord) {
+  const { notes } = chord;
   const pad = [`${notes[0].notation}${octaveMin}`].concat(
     notes.map(({ notation, octave }) => {
       return `${notation}${octavePad + octave}`;
@@ -37,27 +33,5 @@ function chordFromNotes(notes, type) {
     });
   }
   stepper.reverse();
-  const typeLabel = chordTypeLabels[type];
-  const label = notes[0].notation + typeLabel;
-  return { label, notation: notes[0].notation, type, pad, stepper };
-}
-
-function chordFromStepAndType(rootIdx, type) {
-  if (type === "maj7") {
-    const notes = intervalNotes(rootIdx, 0, "maj");
-    const indexMin = roots.indexOf(notes[1].notation);
-    const min = intervalNotes(indexMin, notes[1].octave, "min");
-    return chordFromNotes(notes.concat(min[2]), type);
-  } else if (type === "min7") {
-    const notes = intervalNotes(rootIdx, 0, "min");
-    const indexMin = roots.indexOf(notes[1].notation);
-    const min = intervalNotes(indexMin, notes[1].octave, "min");
-    return chordFromNotes(notes.concat(min[2]), type);
-  } else if (type === "dom7") {
-    const notes = intervalNotes(rootIdx, 0, "maj");
-    const indexMin = roots.indexOf(notes[1].notation);
-    const dim = intervalNotes(indexMin, notes[1].octave, "dim");
-    return chordFromNotes(notes.concat(dim[2]), type);
-  }
-  return chordFromNotes(intervalNotes(rootIdx, 0, type), type);
+  return { ...chord, pad, stepper };
 }
