@@ -1,0 +1,9 @@
+# omnichord moved to another-machine, hosted on GitHub Pages at
+# omnichord.amplib.app. This Netlify site stays alive only to forward:
+# the old address is in the OG tags of every share and in the README.
+#
+# The trailing ! is load-bearing. Netlify applies a redirect rule only when
+# no static file matches the path, and index.html still sits at / in this
+# repo — without the force flag the old app would keep being served and the
+# rule would look like it was ignored.
+/*  https://omnichord.amplib.app/:splat  301!
